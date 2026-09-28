@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from schemas import AlertTriggerPayload, CommentPayload, Ticket
 from filters import filter_logs, filter_chat, apply_context_budget
 from hindsight_service import init_bank, recall_memory, get_all_memories, reset_memory_bank
-from synthesizer import run_idle_post_mortem
+from synthesizer import run_idle_post_mortem, synthesize_remediation_and_anti_pattern
 from watcher import BackgroundLogWatcher
 
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
@@ -184,13 +184,20 @@ def trigger_alert(payload: AlertTriggerPayload):
     degraded_pods = payload.degraded_pods or "4 / 12 pods"
     error_spike = payload.error_spike or "+840% p99"
     detection_source = payload.detection_source or "TEMPR v2"
-    blast_radius = payload.blast_radius or ["payment-gateway:9042", "cart-cache-redis.internal", "notification-worker-pool"]
-    remediation_patch = payload.remediation_patch or """# checkout-service/k8s/deployment.yaml
-- REDIS_POOL_MAX_ACTIVE: 20
-+ REDIS_POOL_MAX_ACTIVE: 80
-+ REDIS_POOL_IDLE_TIMEOUT: 45s"""
-    anti_pattern = payload.anti_pattern or "DO NOT perform rolling pod restarts (e.g. kubectl rollout restart deployment/checkout-service)."
-    anti_pattern_rationale = payload.anti_pattern_rationale or "In past trace INC-101, rolling restarts under active load re-triggered immediate connection pool starvation, dropped in-flight cart reservations, and amplified error spikes by +35%."
+    blast_radius = payload.blast_radius or [f"{payload.service}:internal-worker", f"{payload.service}:egress"]
+    remediation_patch = payload.remediation_patch
+    anti_pattern = payload.anti_pattern
+    anti_pattern_rationale = payload.anti_pattern_rationale
+
+    if not remediation_patch or not anti_pattern:
+        gen_patch, gen_anti, gen_rationale = synthesize_remediation_and_anti_pattern(
+            payload.service, payload.error_type, payload.raw_logs
+        )
+        if not remediation_patch:
+            remediation_patch = gen_patch
+        if not anti_pattern:
+            anti_pattern = gen_anti
+            anti_pattern_rationale = gen_rationale
 
     ticket = Ticket(
         id=ticket_id,

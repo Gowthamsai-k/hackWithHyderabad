@@ -95,3 +95,115 @@ Output raw JSON only. Do NOT include markdown code blocks.
     # Ingest permanently into Hindsight memory
     retain_post_mortem(ticket_id, service, post_mortem, closed_at)
     return post_mortem
+
+def synthesize_remediation_and_anti_pattern(service: str, error_type: str, raw_logs: list) -> tuple[str, str, str]:
+    """
+    Synthesizes a tailored unified-diff remediation patch and anti-pattern warning
+    for incoming crash alerts. Uses Groq LLM if configured; otherwise applies
+    context-aware heuristic patterns based on the language and stack trace.
+    """
+    logs_text = "\n".join(raw_logs[-20:]) if raw_logs else ""
+    lower_logs = logs_text.lower()
+    lower_err = (error_type or "").lower()
+
+    if groq_client:
+        prompt = f"""You are an expert SRE and Software Engineer. A runtime crash occurred in service '{service}'.
+Error Type: {error_type}
+Recent Logs & Stack Trace:
+{logs_text}
+
+Provide:
+1. remediation_patch: A unified diff (diff format with - and + lines) showing the exact code or config fix needed.
+2. anti_pattern: A clear directive stating what NOT to do (e.g. "DO NOT ...").
+3. anti_pattern_rationale: 1-2 sentences explaining why that anti-pattern fails or worsens the issue.
+
+Respond with valid JSON matching:
+{{
+  "remediation_patch": "...",
+  "anti_pattern": "...",
+  "anti_pattern_rationale": "..."
+}}
+Output raw JSON only. Do NOT include markdown code fences.
+"""
+        try:
+            response = groq_client.chat.completions.create(
+                model=GROQ_MODEL,
+                messages=[{"role": "user", "content": prompt}],
+                response_format={"type": "json_object"}
+            )
+            data = clean_llm_json(response.choices[0].message.content)
+            patch = data.get("remediation_patch", "").strip()
+            anti = data.get("anti_pattern", "").strip()
+            rationale = data.get("anti_pattern_rationale", "").strip()
+            if patch and anti:
+                return patch, anti, rationale
+        except Exception as e:
+            print(f"[!] Groq patch generation failed ({e}). Using context-aware heuristic.")
+
+    # Context-aware fallback based on stack trace / language
+    if any(k in lower_err or k in lower_logs for k in ["indexoutofbound", "outofbounds", "indexerror"]):
+        m = re.search(r"at\s+([\w\.\$]+)\.([\w\$]+)\(([\w]+\.java):(\d+)\)", logs_text)
+        file_ref = m.group(3) if m else "App.java"
+        line_ref = m.group(4) if m else "1"
+        patch = f"""// {file_ref} (around line {line_ref})
+- for (int i = 0; i <= items.length; i++) {{
++ for (int i = 0; i < items.length; i++) {{"""
+        anti = "DO NOT suppress IndexOutOfBoundsException with empty try-catch blocks."
+        rationale = "Suppressing bounds exceptions masks batch truncation, causing silent data drops and unfulfilled operations."
+        return patch, anti, rationale
+
+    elif "nullpointerexception" in lower_err or "nullpointer" in lower_logs:
+        m = re.search(r"at\s+([\w\.\$]+)\.([\w\$]+)\(([\w]+\.java):(\d+)\)", logs_text)
+        file_ref = m.group(3) if m else "App.java"
+        line_ref = m.group(4) if m else "1"
+        patch = f"""// {file_ref} (around line {line_ref})
+- return target.process();
++ if (target == null) {{
++     logger.warn("Target instance is null; returning default");
++     return Optional.empty();
++ }}
++ return Optional.of(target.process());"""
+        anti = "DO NOT catch generic java.lang.Throwable or java.lang.Exception to ignore NPE."
+        rationale = "Catching generic exceptions conceals missing dependencies or uninitialized state, causing zombie threads."
+        return patch, anti, rationale
+
+    elif "zerodivisionerror" in lower_err or "division by zero" in lower_logs:
+        patch = """# math/calculation.py
+- return numerator / denominator
++ if denominator == 0:
++     return 0.0
++ return numerator / denominator"""
+        anti = "DO NOT catch ZeroDivisionError without returning a sensible default."
+        rationale = "Swallowing ZeroDivisionError leaves downstream calculations in an undefined state."
+        return patch, anti, rationale
+
+    elif "keyerror" in lower_err:
+        patch = """# handler.py
+- value = data['target_key']
++ value = data.get('target_key', default_fallback)"""
+        anti = "DO NOT disable dictionary schema validation."
+        rationale = "Allowing malformed JSON payloads bypasses downstream data contract guarantees."
+        return patch, anti, rationale
+
+    elif "redis" in lower_logs or "connectionpool" in lower_logs or "connection timeout" in lower_logs:
+        patch = """# config/deployment.yaml
+- POOL_MAX_ACTIVE: 20
++ POOL_MAX_ACTIVE: 80
++ POOL_IDLE_TIMEOUT: 45s"""
+        anti = "DO NOT perform rolling pod restarts."
+        rationale = "Rolling restarts under active load re-trigger immediate socket starvation and drop in-flight transactions."
+        return patch, anti, rationale
+
+    # Generic fallback
+    patch = f"""// {service} error remediation
+- // Unchecked invocation
++ try {{
++     validateInput(request);
++     executeSafe(request);
++ }} catch ({error_type or 'Exception'} ex) {{
++     logger.error("Handled boundary failure: " + ex.getMessage());
++ }}"""
+    anti = "DO NOT restart the service container blindly without fixing the root cause."
+    rationale = "Container restarts under identical load conditions replay the crash loop and degrade cluster availability."
+    return patch, anti, rationale
+
