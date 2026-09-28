@@ -2,12 +2,12 @@ from datetime import datetime, timezone
 import pytest
 from fastapi.testclient import TestClient
 
-from schemas import AlertTriggerPayload, CommentPayload, PostMortemExtraction, Ticket
-from filters import filter_logs, filter_chat
-from watcher import BackgroundLogWatcher
-import hindsight_service
-import synthesizer
-from main import app, TICKETS
+from copilot.schemas import AlertTriggerPayload, CommentPayload, PostMortemExtraction, Ticket
+from copilot.filters import filter_logs, filter_chat
+from copilot.watcher import BackgroundLogWatcher
+from copilot import hindsight_service
+from copilot import synthesizer
+from copilot.main import app, TICKETS
 
 client = TestClient(app)
 
@@ -53,7 +53,7 @@ def test_filters():
     assert not any("morning" in c["text"] for c in cleaned_chat)
 
     # Test Stratified Windowing & Context Budget
-    from filters import apply_context_budget
+    from copilot.filters import apply_context_budget
     long_logs = [f"2026-09-28 ERROR error number {i}" for i in range(120)]
     long_chat = [{"author": f"User{i}", "text": f"action step {i}"} for i in range(80)]
     budget_logs, budget_chat = apply_context_budget(long_logs, long_chat, max_log_lines=30, max_chat_messages=20)

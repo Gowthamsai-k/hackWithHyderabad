@@ -5,13 +5,13 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, BackgroundTasks, HTTPException
 from fastapi.responses import PlainTextResponse, FileResponse
 from pydantic import BaseModel
-from schemas import AlertTriggerPayload, CommentPayload, Ticket
-from filters import filter_logs, filter_chat, apply_context_budget
-from hindsight_service import init_bank, recall_memory, get_all_memories, reset_memory_bank
-from synthesizer import run_idle_post_mortem, synthesize_remediation_and_anti_pattern
-from watcher import BackgroundLogWatcher
+from .schemas import AlertTriggerPayload, CommentPayload, Ticket
+from .filters import filter_logs, filter_chat, apply_context_budget
+from .hindsight_service import init_bank, recall_memory, get_all_memories, reset_memory_bank
+from .synthesizer import run_idle_post_mortem, synthesize_remediation_and_anti_pattern
+from .watcher import BackgroundLogWatcher
 
-STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
+STATIC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "static"))
 log_watcher = BackgroundLogWatcher(buffer_size=100, debounce_window_sec=30.0)
 
 def seed_initial_tickets():

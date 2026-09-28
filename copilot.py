@@ -72,9 +72,11 @@ def run_project(cmd_args: list):
 
     sys.exit(return_code)
 
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
+
 def add_project(project_id: str, log_file: str):
     import yaml
-    config_path = os.path.join(os.path.dirname(__file__), "projects.yaml")
+    config_path = os.path.join(os.path.dirname(__file__), "config", "projects.yaml")
     data = {"projects": []}
     if os.path.exists(config_path):
         with open(config_path, "r", encoding="utf-8") as f:
@@ -84,7 +86,7 @@ def add_project(project_id: str, log_file: str):
 
     existing = [p for p in data["projects"] if p.get("id") == project_id]
     if existing:
-        print(f"[!] Project '{project_id}' already exists in projects.yaml. Updating log_file.")
+        print(f"[!] Project '{project_id}' already exists in config/projects.yaml. Updating log_file.")
         existing[0]["log_file"] = log_file
     else:
         data["projects"].append({
@@ -92,7 +94,7 @@ def add_project(project_id: str, log_file: str):
             "service": project_id,
             "log_file": log_file
         })
-        print(f"[+] Added project '{project_id}' to projects.yaml.")
+        print(f"[+] Added project '{project_id}' to config/projects.yaml.")
 
     with open(config_path, "w", encoding="utf-8") as f:
         yaml.dump(data, f, sort_keys=False, default_flow_style=False)
@@ -108,14 +110,14 @@ def add_project(project_id: str, log_file: str):
 
 def list_projects():
     import yaml
-    config_path = os.path.join(os.path.dirname(__file__), "projects.yaml")
+    config_path = os.path.join(os.path.dirname(__file__), "config", "projects.yaml")
     if not os.path.exists(config_path):
-        print("[-] No projects.yaml found.")
+        print("[-] No config/projects.yaml found.")
         return
     with open(config_path, "r", encoding="utf-8") as f:
         data = yaml.safe_load(f) or {}
     projects = data.get("projects", [])
-    print(f"\n📋 [Registered Projects in projects.yaml] ({len(projects)} total):")
+    print(f"\n📋 [Registered Projects in config/projects.yaml] ({len(projects)} total):")
     print(f"{'PROJECT ID':<25} {'LOG FILE':<40} {'STATUS'}")
     print("-" * 75)
     for p in projects:
@@ -126,7 +128,7 @@ def list_projects():
     print()
 
 def start_watcher():
-    from project_watcher import run_project_watcher_daemon
+    from copilot.project_watcher import run_project_watcher_daemon
     run_project_watcher_daemon()
 
 if __name__ == "__main__":

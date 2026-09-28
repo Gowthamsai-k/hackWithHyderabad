@@ -4,8 +4,8 @@ import re
 from datetime import datetime, timezone
 from dotenv import load_dotenv
 from groq import Groq
-from schemas import PostMortemExtraction
-from hindsight_service import retain_post_mortem
+from .schemas import PostMortemExtraction
+from .hindsight_service import retain_post_mortem
 
 load_dotenv()
 

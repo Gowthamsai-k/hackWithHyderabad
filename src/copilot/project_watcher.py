@@ -6,7 +6,7 @@ import requests
 import threading
 
 COPILOT_TRIGGER_URL = os.getenv("COPILOT_TRIGGER_URL", "http://127.0.0.1:8000/api/v1/alerts/trigger")
-CONFIG_PATH = os.path.join(os.path.dirname(__file__), "projects.yaml")
+CONFIG_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "config", "projects.yaml"))
 
 DEFAULT_ERROR_PATTERNS = [
     "Exception", "Error", "Traceback", "Fatal", "Panic", 
@@ -47,7 +47,7 @@ def tail_project_log(project: dict, stop_flag: threading.Event):
 
     # Resolve log path
     if not os.path.isabs(log_file):
-        base_dir = os.path.dirname(__file__)
+        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
         log_file_abs = os.path.abspath(os.path.join(base_dir, log_file))
     else:
         log_file_abs = log_file
