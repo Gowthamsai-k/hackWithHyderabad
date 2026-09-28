@@ -6,7 +6,7 @@ from fastapi import FastAPI, BackgroundTasks, HTTPException
 from fastapi.responses import PlainTextResponse, FileResponse
 from pydantic import BaseModel
 from schemas import AlertTriggerPayload, CommentPayload, Ticket
-from filters import filter_logs, filter_chat
+from filters import filter_logs, filter_chat, apply_context_budget
 from hindsight_service import init_bank, recall_memory, get_all_memories, reset_memory_bank
 from synthesizer import run_idle_post_mortem
 from watcher import BackgroundLogWatcher
@@ -190,13 +190,14 @@ def resolve_ticket(ticket_id: str, background_tasks: BackgroundTasks):
     # Information Reduction Funnel: Compress before LLM ingestion
     clean_logs = filter_logs(ticket.raw_logs)
     clean_chat = filter_chat(ticket.comments)
+    budgeted_logs, budgeted_chat = apply_context_budget(clean_logs, clean_chat, max_log_lines=50, max_chat_messages=30)
 
     ticket.reduction_stats = {
         "raw_logs_count": len(ticket.raw_logs),
-        "clean_logs_count": len(clean_logs),
+        "clean_logs_count": len(budgeted_logs),
         "raw_comments_count": len(ticket.comments),
-        "clean_comments_count": len(clean_chat),
-        "log_compression_pct": round((1.0 - (len(clean_logs) / max(len(ticket.raw_logs), 1))) * 100, 1)
+        "clean_comments_count": len(budgeted_chat),
+        "log_compression_pct": round((1.0 - (len(budgeted_logs) / max(len(ticket.raw_logs), 1))) * 100, 1)
     }
 
     # Queue Idle-Path synthesis worker asynchronously
@@ -204,8 +205,8 @@ def resolve_ticket(ticket_id: str, background_tasks: BackgroundTasks):
         _async_idle_worker,
         ticket.id,
         ticket.service,
-        clean_logs,
-        clean_chat,
+        budgeted_logs,
+        budgeted_chat,
         closed_at
     )
 

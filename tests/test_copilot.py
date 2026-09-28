@@ -52,6 +52,15 @@ def test_filters():
     assert len(cleaned_chat) == 2
     assert not any("morning" in c["text"] for c in cleaned_chat)
 
+    # Test Stratified Windowing & Context Budget
+    from filters import apply_context_budget
+    long_logs = [f"2026-09-28 ERROR error number {i}" for i in range(120)]
+    long_chat = [{"author": f"User{i}", "text": f"action step {i}"} for i in range(80)]
+    budget_logs, budget_chat = apply_context_budget(long_logs, long_chat, max_log_lines=30, max_chat_messages=20)
+    assert len(budget_logs) == 31  # 15 head + 1 omitted marker + 15 tail
+    assert "omitted to fit context window" in budget_logs[15]
+    assert len(budget_chat) == 21  # 10 head + 1 omitted marker + 10 tail
+
 def test_watcher():
     watcher = BackgroundLogWatcher(buffer_size=5, debounce_window_sec=2.0)
     assert watcher.push_line("INFO healthy") is None

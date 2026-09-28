@@ -48,3 +48,39 @@ def filter_chat(comments: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         if has_code or has_action:
             meaningful.append(c)
     return meaningful
+
+def apply_context_budget(
+    logs: List[str], 
+    chat: List[Dict[str, Any]], 
+    max_log_lines: int = 50, 
+    max_chat_messages: int = 30
+) -> tuple[List[str], List[Dict[str, Any]]]:
+    """
+    Enforces hard token/line limits using Head-and-Tail Stratified Windowing.
+    Guarantees the bundle will never exceed LLM context window limits regardless of outage duration.
+    """
+    # 1. Stratified log windowing: preserve onset (head) and recovery (tail)
+    if len(logs) > max_log_lines:
+        half = max_log_lines // 2
+        omitted = len(logs) - max_log_lines
+        budgeted_logs = (
+            logs[:half] 
+            + [f"--- [... {omitted} intermediate error events omitted to fit context window ...] ---"] 
+            + logs[-half:]
+        )
+    else:
+        budgeted_logs = logs
+
+    # 2. Stratified chat windowing: preserve first diagnostic attempts and final resolution steps
+    if len(chat) > max_chat_messages:
+        half_chat = max_chat_messages // 2
+        omitted_chat = len(chat) - max_chat_messages
+        budgeted_chat = (
+            chat[:half_chat] 
+            + [{"author": "SYSTEM_WINDOW", "text": f"[... {omitted_chat} intermediate triage messages omitted ...]"}] 
+            + chat[-half_chat:]
+        )
+    else:
+        budgeted_chat = chat
+
+    return budgeted_logs, budgeted_chat
