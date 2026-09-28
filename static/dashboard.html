@@ -1,31 +1,18 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Autonomous Incident Copilot | Enterprise SRE CRM & Living Memory</title>
+  <title>Incident Management Portal | Production SRE CRM</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script>
     tailwind.config = {
-      darkMode: 'class',
       theme: {
         extend: {
-          colors: {
-            brand: {
-              50: '#eef2ff',
-              100: '#e0e7ff',
-              500: '#6366f1',
-              600: '#4f46e5',
-              700: '#4338ca',
-            },
-            dark: {
-              950: '#0b0f17',
-              900: '#111827',
-              850: '#172033',
-              800: '#1f293d',
-              700: '#374151'
-            }
+          fontFamily: {
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+            mono: ['JetBrains Mono', 'Menlo', 'Monaco', 'Courier New', 'monospace'],
           }
         }
       }
@@ -40,805 +27,557 @@
       animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
     }
     .scrollbar-thin::-webkit-scrollbar {
-      width: 5px;
-      height: 5px;
+      width: 6px;
+      height: 6px;
     }
     .scrollbar-thin::-webkit-scrollbar-thumb {
-      background: #374151;
+      background: #cbd5e1;
       border-radius: 9999px;
     }
   </style>
 </head>
-<body class="bg-dark-950 text-slate-100 min-h-screen flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col font-sans antialiased selection:bg-indigo-500 selection:text-white">
 
-  <!-- Top Navigation & Live Telemetry Bar -->
-  <header class="border-b border-slate-800/90 bg-dark-900/90 backdrop-blur sticky top-0 z-50 px-6 py-3 flex items-center justify-between">
+  <!-- Top Global Header -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-40 px-6 py-3.5 flex items-center justify-between shadow-xs">
     <div class="flex items-center space-x-3">
-      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 via-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/25">
-        <i class="fa-solid fa-brain-circuit text-white text-xl"></i>
+      <div class="w-9 h-9 rounded-lg bg-slate-900 flex items-center justify-center text-white shadow-xs">
+        <i class="fa-solid fa-shield-halved text-base"></i>
       </div>
       <div>
         <div class="flex items-center gap-2">
-          <h1 class="text-base font-bold tracking-tight text-white">Incident Copilot CRM</h1>
-          <span class="text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span> Living Memory Active
+          <h1 class="text-sm font-bold tracking-tight text-slate-900">Incident Command CRM</h1>
+          <span class="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span> Live Hindsight Memory
           </span>
         </div>
-        <p class="text-xs text-slate-400">Decoupled Fast-Path Outage Bus & Post-Mortem Knowledge Synthesis</p>
+        <p class="text-[11px] text-slate-500">Autonomous Decoupled Fast-Path Incident Copilot & Microservice Telemetry</p>
       </div>
     </div>
 
-    <!-- Quick Scenario Bar -->
-    <div class="flex items-center space-x-2">
-      <button id="btn-auto-demo" onclick="runCompleteScenario()" class="text-xs bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold px-4 py-2 rounded-lg flex items-center gap-2 shadow-lg shadow-indigo-600/20 transition active:scale-95">
-        <i class="fa-solid fa-play"></i> Run E2E Novel &rarr; Recurring Demo
+    <!-- Quick Environment Controls & Chaos -->
+    <div class="flex items-center space-x-2.5">
+      <div class="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 text-xs text-slate-600 font-mono">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span>checkout-service:8050</span>
+        <span id="pool-metric-badge" class="font-bold text-slate-900">10 Max</span>
+      </div>
+
+      <button onclick="injectRealtimeSurge()" class="text-xs bg-rose-600 hover:bg-rose-500 text-white font-medium px-3.5 py-2 rounded-lg flex items-center gap-1.5 transition shadow-xs">
+        <i class="fa-solid fa-bolt"></i> Send Traffic Surge
       </button>
 
-      <div class="h-6 w-px bg-slate-800 mx-1"></div>
-
-      <button onclick="triggerNovelIncident()" class="text-xs bg-rose-600/90 hover:bg-rose-500 text-white font-medium px-3 py-2 rounded-lg flex items-center gap-1.5 transition">
-        <i class="fa-solid fa-triangle-exclamation"></i> 1. Novel Outage
-      </button>
-      <button onclick="simulateTriageChat()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium px-3 py-2 rounded-lg flex items-center gap-1.5 transition border border-slate-700">
-        <i class="fa-solid fa-comments"></i> 2. Triage Chat
-      </button>
-      <button onclick="resolveActiveTicket()" class="text-xs bg-emerald-600/90 hover:bg-emerald-500 text-white font-medium px-3 py-2 rounded-lg flex items-center gap-1.5 transition">
-        <i class="fa-solid fa-check"></i> 3. Resolve & Synthesize
-      </button>
-      <button onclick="triggerRecurringIncident()" class="text-xs bg-purple-600/90 hover:bg-purple-500 text-white font-medium px-3 py-2 rounded-lg flex items-center gap-1.5 transition">
-        <i class="fa-solid fa-rotate-right"></i> 4. Recurring Outage
-      </button>
-
-      <div class="h-6 w-px bg-slate-800 mx-1"></div>
-
-      <button onclick="resetDemoEnvironment()" title="Reset Environment" class="text-xs bg-slate-800/80 hover:bg-rose-950/60 hover:text-rose-300 text-slate-400 font-medium px-2.5 py-2 rounded-lg transition border border-slate-800">
-        <i class="fa-solid fa-trash-can"></i>
+      <button onclick="fetchTickets()" class="text-xs bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-medium px-3 py-2 rounded-lg flex items-center gap-1.5 transition shadow-xs">
+        <i class="fa-solid fa-rotate text-slate-400"></i> Refresh
       </button>
     </div>
   </header>
 
-  <!-- Guided Stepper Banner (explaining the test flow clearly to judges & users) -->
-  <div class="bg-dark-900 border-b border-slate-800/80 px-6 py-2 flex items-center justify-between text-xs text-slate-300">
-    <div class="flex items-center gap-3">
-      <span class="font-semibold text-slate-400 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
-        <i class="fa-solid fa-route text-indigo-400"></i> Scenario Stepper:
-      </span>
-      <span id="step-pill-1" class="px-2.5 py-1 rounded bg-slate-800 text-slate-400 flex items-center gap-1.5">
-        <span class="w-4 h-4 rounded-full bg-slate-700 text-[10px] flex items-center justify-center font-bold">1</span> Novel Outage (Cold Start)
-      </span>
-      <i class="fa-solid fa-arrow-right text-[10px] text-slate-600"></i>
-      <span id="step-pill-2" class="px-2.5 py-1 rounded bg-slate-800 text-slate-400 flex items-center gap-1.5">
-        <span class="w-4 h-4 rounded-full bg-slate-700 text-[10px] flex items-center justify-center font-bold">2</span> Triage Chat (Dead End vs Fix)
-      </span>
-      <i class="fa-solid fa-arrow-right text-[10px] text-slate-600"></i>
-      <span id="step-pill-3" class="px-2.5 py-1 rounded bg-slate-800 text-slate-400 flex items-center gap-1.5">
-        <span class="w-4 h-4 rounded-full bg-slate-700 text-[10px] flex items-center justify-center font-bold">3</span> Idle Synthesis (Negative Knowledge)
-      </span>
-      <i class="fa-solid fa-arrow-right text-[10px] text-slate-600"></i>
-      <span id="step-pill-4" class="px-2.5 py-1 rounded bg-slate-800 text-slate-400 flex items-center gap-1.5">
-        <span class="w-4 h-4 rounded-full bg-slate-700 text-[10px] flex items-center justify-center font-bold">4</span> Recurring Outage (Living Memory Payoff!)
-      </span>
-    </div>
-    <div id="demo-status-badge" class="text-xs text-slate-400 italic">Ready for demonstration</div>
-  </div>
-
-  <!-- Real-Time Microservice Status & Chaos Bar -->
-  <div class="bg-indigo-950/30 border-b border-indigo-900/40 px-6 py-2.5 flex flex-wrap items-center justify-between text-xs gap-3">
-    <div class="flex items-center gap-4">
-      <div class="flex items-center gap-2">
-        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-        <span class="font-bold text-white tracking-wide">Live Microservice:</span>
-        <span class="font-mono text-indigo-300">checkout-service:8050</span>
-      </div>
-      <div class="flex items-center gap-2 bg-dark-900/80 px-2.5 py-1 rounded border border-slate-800 text-[11px]">
-        <span class="text-slate-400">Connection Pool:</span>
-        <span id="live-pool-display" class="font-mono font-bold text-emerald-400">10 Max</span>
-      </div>
-      <div class="flex items-center gap-2 bg-dark-900/80 px-2.5 py-1 rounded border border-slate-800 text-[11px]">
-        <span class="text-slate-400">Log Tailer:</span>
-        <span class="font-mono text-emerald-400 font-semibold flex items-center gap-1">
-          <i class="fa-solid fa-wave-square text-[10px]"></i> Streaming to Port 8000
-        </span>
-      </div>
-    </div>
-
-    <!-- Live Chaos Injection Controls -->
+  <!-- Sub-header Alert Bar -->
+  <div class="bg-slate-100/80 border-b border-slate-200 px-6 py-2.5 flex items-center justify-between text-xs text-slate-600">
     <div class="flex items-center gap-2">
-      <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mr-1">Chaos & Actions:</span>
-      <button onclick="injectRealtimeSurge()" class="bg-rose-600 hover:bg-rose-500 text-white font-medium px-3 py-1 rounded-md text-xs flex items-center gap-1.5 transition shadow shadow-rose-900/40">
-        <i class="fa-solid fa-bolt"></i> Send Traffic Surge (Overwhelm Pool)
-      </button>
-      <button onclick="injectRealtimeRestart()" class="bg-amber-600/80 hover:bg-amber-500 text-white font-medium px-3 py-1 rounded-md text-xs flex items-center gap-1.5 transition">
-        <i class="fa-solid fa-arrows-rotate"></i> Rolling Restart
-      </button>
-      <button onclick="injectRealtimeHelmPatch()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-3 py-1 rounded-md text-xs flex items-center gap-1.5 transition">
-        <i class="fa-solid fa-wrench"></i> Helm Patch (Pool &rarr; 50)
-      </button>
+      <i class="fa-solid fa-circle-info text-indigo-600"></i>
+      <span><strong>Enterprise Incident Environment:</strong> Click on any ticket row below to inspect the dynamic diagnostic screen with live root stack trace, blast radius, and Hindsight remediation patch.</span>
+    </div>
+    <div class="text-[11px] text-slate-500 font-mono">
+      Cluster: <span class="text-slate-800 font-semibold">us-east-prod-1</span>
     </div>
   </div>
 
-  <!-- 3-Column Dashboard Grid -->
-  <main class="flex-1 max-w-[1700px] w-full mx-auto p-5 grid grid-cols-12 gap-5 overflow-hidden">
+  <!-- Main Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-6 flex flex-col space-y-5">
 
-    <!-- Column 1: Incident Queue / CRM Tickets (3 Cols) -->
-    <section class="col-span-12 lg:col-span-3 flex flex-col space-y-3">
-      <div class="flex items-center justify-between pb-1 border-b border-slate-800">
-        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-          <i class="fa-solid fa-fire text-rose-500"></i> Incident Stream (<span id="ticket-count">0</span>)
+    <!-- KPI Metric Cards -->
+    <div class="grid grid-cols-4 gap-4">
+      <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
+        <div class="text-[11px] text-slate-400 font-mono uppercase tracking-wider font-semibold">Active P1 Incidents</div>
+        <div class="text-2xl font-bold text-rose-600 font-mono mt-1" id="kpi-p1-count">2</div>
+        <div class="text-[11px] text-slate-500 mt-1 flex items-center gap-1">
+          <i class="fa-solid fa-arrow-trend-up text-rose-500"></i> Critical severity active
+        </div>
+      </div>
+      <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
+        <div class="text-[11px] text-slate-400 font-mono uppercase tracking-wider font-semibold">Total Queued Incidents</div>
+        <div class="text-2xl font-bold text-slate-900 font-mono mt-1" id="kpi-total-count">3</div>
+        <div class="text-[11px] text-slate-500 mt-1">Recorded across microservices</div>
+      </div>
+      <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
+        <div class="text-[11px] text-slate-400 font-mono uppercase tracking-wider font-semibold">Fast-Path Recall Latency</div>
+        <div class="text-2xl font-bold text-emerald-600 font-mono mt-1">8 ms</div>
+        <div class="text-[11px] text-slate-500 mt-1">Zero hot-path LLM delay</div>
+      </div>
+      <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
+        <div class="text-[11px] text-slate-400 font-mono uppercase tracking-wider font-semibold">Hindsight Living Memory</div>
+        <div class="text-2xl font-bold text-indigo-600 font-mono mt-1">Connected</div>
+        <div class="text-[11px] text-slate-500 mt-1">Negative knowledge retained</div>
+      </div>
+    </div>
+
+    <!-- Ticket Environment Table Card -->
+    <div class="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden flex flex-col">
+      <div class="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+        <div>
+          <h2 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+            Active Incident Tickets Queue
+            <span class="text-xs font-mono font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200" id="badge-total-tickets">3</span>
+          </h2>
+          <p class="text-xs text-slate-500 mt-0.5">Select any ticket to trigger the dynamic incident screen</p>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <input type="text" id="filter-search" oninput="filterTicketsTable()" placeholder="Search service, ticket ID, or issue..." class="text-xs border border-slate-200 rounded-lg px-3 py-1.5 w-64 focus:outline-none focus:border-indigo-500">
+        </div>
+      </div>
+
+      <!-- Tickets Table -->
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-slate-50/70 border-b border-slate-200 text-[11px] font-mono uppercase text-slate-500 font-semibold tracking-wider">
+              <th class="py-3 px-5">Ticket ID</th>
+              <th class="py-3 px-4">Severity</th>
+              <th class="py-3 px-4">Incident Title & Impact</th>
+              <th class="py-3 px-4">Service</th>
+              <th class="py-3 px-4">Region</th>
+              <th class="py-3 px-4">Degraded Pods</th>
+              <th class="py-3 px-4">Status</th>
+              <th class="py-3 px-5 text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody id="tickets-table-body" class="divide-y divide-slate-100 text-xs">
+            <!-- Populated via JavaScript -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ========================================================================= -->
+  <!-- DYNAMIC MODAL SCREEN MATCHING screen.png EXACTLY                           -->
+  <!-- ========================================================================= -->
+  <div id="incident-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
+    
+    <!-- The exact container from screen.png -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl p-7 max-w-5xl w-full my-8 relative transform transition-all font-sans">
+      
+      <!-- Close Button (X) -->
+      <button onclick="closeIncidentModal()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600 w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-100 transition">
+        <i class="fa-solid fa-xmark text-sm"></i>
+      </button>
+
+      <!-- Row 1: Header Badges & Actions -->
+      <div class="flex items-center justify-between pr-8">
+        <div class="flex items-center gap-2">
+          <!-- Ticket ID Badge -->
+          <span id="modal-ticket-id" class="bg-slate-950 text-white font-mono text-xs font-bold px-2.5 py-1 rounded-md tracking-wide">
+            #INC-104
+          </span>
+          <!-- Service Badge -->
+          <span id="modal-service-badge" class="bg-slate-100 text-slate-700 font-mono text-xs px-2.5 py-1 rounded-md border border-slate-200 font-medium">
+            checkout-service
+          </span>
+          <!-- Region Badge -->
+          <span id="modal-region-badge" class="bg-slate-100 text-slate-700 font-mono text-xs px-2.5 py-1 rounded-md border border-slate-200 font-medium">
+            us-east-1a
+          </span>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <!-- context.md Copy button -->
+          <button onclick="copyContextCurl()" class="border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 text-xs px-3 py-1 rounded-md flex items-center gap-1.5 shadow-2xs font-mono font-medium transition cursor-pointer">
+            <i class="fa-regular fa-file-code text-slate-400"></i> context.md <i class="fa-regular fa-copy text-slate-400 ml-1"></i> Copy
+          </button>
+          <!-- Severity Badge -->
+          <span id="modal-severity-badge" class="bg-rose-50 text-rose-600 border border-rose-200 font-mono text-xs font-semibold px-2.5 py-1 rounded-md uppercase tracking-wider">
+            P1 · CRITICAL
+          </span>
+        </div>
+      </div>
+
+      <!-- Row 2: Title & Description -->
+      <div class="mt-4 mb-3">
+        <h2 id="modal-title" class="text-xl font-bold text-slate-900 tracking-tight">
+          Redis Pool Starvation in checkout-service Pods
         </h2>
-        <div class="flex gap-1 text-[11px]">
-          <button onclick="fetchTickets()" class="text-slate-400 hover:text-white px-2 py-0.5 rounded bg-slate-800 border border-slate-700">
-            <i class="fa-solid fa-rotate text-[10px]"></i>
+        <p id="modal-description" class="text-xs text-slate-500 leading-relaxed mt-1">
+          Connections exhausted during flash checkout load spike; transactions failing with timeout cascade to upstream payment router.
+        </p>
+      </div>
+
+      <!-- Row 3: Metrics Banner (3 Columns) -->
+      <div class="bg-slate-50/70 border border-slate-100 rounded-xl p-3.5 my-3 grid grid-cols-3 gap-4">
+        <div>
+          <div class="text-[10px] text-slate-400 font-mono font-medium uppercase tracking-wider">DEGRADED PODS</div>
+          <div id="modal-degraded-pods" class="text-sm font-bold text-slate-800 font-mono mt-0.5">4 / 12 pods</div>
+        </div>
+        <div>
+          <div class="text-[10px] text-slate-400 font-mono font-medium uppercase tracking-wider">ERROR SPIKE</div>
+          <div id="modal-error-spike" class="text-sm font-bold text-rose-500 font-mono mt-0.5">+840% p99</div>
+        </div>
+        <div>
+          <div class="text-[10px] text-slate-400 font-mono font-medium uppercase tracking-wider">DETECTION SOURCE</div>
+          <div id="modal-detection-source" class="text-sm font-bold text-slate-800 font-mono mt-0.5">TEMPR v2</div>
+        </div>
+      </div>
+
+      <!-- Row 4: Identified Blast Radius -->
+      <div class="flex flex-wrap items-center gap-2 mb-4">
+        <span class="text-[10px] text-slate-400 font-mono font-medium uppercase tracking-wider mr-1">IDENTIFIED BLAST RADIUS:</span>
+        <div id="modal-blast-radius" class="flex flex-wrap items-center gap-2">
+          <!-- Pills populated dynamically -->
+          <span class="bg-slate-100/90 text-slate-700 font-mono text-xs px-2.5 py-1 rounded border border-slate-200 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-rose-500"></span> payment-gateway:9042
+          </span>
+          <span class="bg-slate-100/90 text-slate-700 font-mono text-xs px-2.5 py-1 rounded border border-slate-200 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-rose-500"></span> cart-cache-redis.internal
+          </span>
+          <span class="bg-slate-100/90 text-slate-700 font-mono text-xs px-2.5 py-1 rounded border border-slate-200 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-slate-400"></span> notification-worker-pool
+          </span>
+        </div>
+      </div>
+
+      <!-- Row 5: Split Cards (Root Stack Trace vs Remediation Patch) -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 my-2">
+        
+        <!-- Left Box: Root Stack Trace -->
+        <div class="flex flex-col rounded-xl overflow-hidden border border-slate-200 shadow-2xs">
+          <div class="bg-slate-100/80 px-3.5 py-2 border-b border-slate-200 text-xs font-semibold text-slate-700 flex items-center justify-between">
+            <span class="flex items-center gap-1.5">
+              <i class="fa-solid fa-bug text-rose-500 text-xs"></i> Root Stack Trace
+            </span>
+            <button onclick="copyTextFromElement('modal-stack-trace')" class="text-slate-500 hover:text-slate-800 text-[11px] font-mono flex items-center gap-1">
+              <i class="fa-regular fa-copy"></i> Copy
+            </button>
+          </div>
+          <pre id="modal-stack-trace" class="bg-slate-950 text-slate-200 p-3.5 font-mono text-xs leading-relaxed overflow-x-auto min-h-[140px] max-h-48 scrollbar-thin select-all">Redis::ConnectionPool::TimeoutError: Waited 2.000 sec, 0 pool tokens available
+  at checkout/db/redis.go:142 in AcquireClientWithRetry()
+  at checkout/handlers/cart.go:88 in CommitCartReservation()</pre>
+        </div>
+
+        <!-- Right Box: Remediation Patch -->
+        <div class="flex flex-col rounded-xl overflow-hidden border border-slate-200 shadow-2xs">
+          <div class="bg-slate-100/80 px-3.5 py-2 border-b border-slate-200 text-xs font-semibold text-slate-700 flex items-center justify-between">
+            <span class="flex items-center gap-1.5">
+              <i class="fa-solid fa-code-commit text-indigo-600 text-xs"></i> Remediation Patch (PR #1042)
+            </span>
+            <button onclick="copyTextFromElement('modal-remediation-patch')" class="text-slate-500 hover:text-slate-800 text-[11px] font-mono flex items-center gap-1">
+              <i class="fa-regular fa-copy"></i> Copy
+            </button>
+          </div>
+          <pre id="modal-remediation-patch" class="bg-slate-950 text-slate-200 p-3.5 font-mono text-xs leading-relaxed overflow-x-auto min-h-[140px] max-h-48 scrollbar-thin select-all"># checkout-service/k8s/deployment.yaml
+<span class="text-rose-400">- REDIS_POOL_MAX_ACTIVE: 20</span>
+<span class="text-emerald-400">+ REDIS_POOL_MAX_ACTIVE: 80</span>
+<span class="text-emerald-400">+ REDIS_POOL_IDLE_TIMEOUT: 45s</span></pre>
+        </div>
+
+      </div>
+
+      <!-- Row 6: Hindsight Memory Card (Runbook & Anti-Pattern) -->
+      <div id="modal-hindsight-container" class="mt-3 p-3.5 rounded-xl bg-indigo-50/50 border border-indigo-100 text-xs text-slate-700">
+        <div class="font-bold text-indigo-900 flex items-center gap-1.5 uppercase font-mono text-[11px] mb-1">
+          <i class="fa-solid fa-brain text-indigo-600"></i> Hindsight Institutional Runbook Memory
+        </div>
+        <div id="modal-hindsight-runbook" class="text-slate-600 leading-relaxed font-sans">
+          Past fix on checkout-service: Patched Helm values to scale max_connections from 20 to 80. Anti-pattern warning: Do not perform rolling restarts; they re-trigger connection pool exhaustion.
+        </div>
+      </div>
+
+      <!-- Row 7: Bottom Action Footer -->
+      <div class="border-t border-slate-200 pt-4 mt-5 flex items-center justify-between">
+        <div>
+          <button id="modal-btn-resolve" onclick="resolveCurrentModalTicket()" class="bg-slate-950 hover:bg-slate-800 text-white font-medium px-4 py-2 rounded-lg text-xs flex items-center gap-2 shadow-xs transition active:scale-95 cursor-pointer">
+            <i class="fa-solid fa-check text-emerald-400"></i> Resolve Incident
+          </button>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button onclick="simulateReoccurFromModal()" class="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3.5 py-2 rounded-lg text-xs font-medium shadow-2xs transition cursor-pointer">
+            Simulate Re-occur
+          </button>
+          <button onclick="handoffIncident()" class="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3.5 py-2 rounded-lg text-xs font-medium shadow-2xs transition cursor-pointer">
+            Handoff
           </button>
         </div>
       </div>
 
-      <div id="tickets-container" class="space-y-2.5 overflow-y-auto max-h-[calc(100vh-210px)] scrollbar-thin pr-1 flex-1">
-        <div class="p-8 text-center text-slate-500 bg-dark-900/50 rounded-xl border border-slate-800/80">
-          <i class="fa-solid fa-inbox text-3xl mb-2 text-slate-600"></i>
-          <p class="text-xs">No incidents recorded yet.</p>
-          <button onclick="triggerNovelIncident()" class="mt-3 text-xs text-indigo-400 hover:text-indigo-300 underline font-medium">Trigger Novel Outage</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- Column 2: Incident Workspace & Conversational Thread (5 Cols) -->
-    <section class="col-span-12 lg:col-span-5 flex flex-col space-y-4" id="ticket-workspace">
-      <div class="p-12 text-center text-slate-500 bg-dark-900/30 rounded-xl border border-dashed border-slate-800 flex flex-col items-center justify-center min-h-[500px]">
-        <i class="fa-solid fa-server text-4xl mb-3 text-slate-700"></i>
-        <h3 class="text-sm font-semibold text-slate-300">Select an incident from the queue</h3>
-        <p class="text-xs text-slate-500 max-w-sm mt-1">Review live outage telemetry, historical Hindsight runbooks, triage discussions, and IDE context generator.</p>
-      </div>
-    </section>
-
-    <!-- Column 3: The Brain - "Working of the Agent" (4 Cols) -->
-    <section class="col-span-12 lg:col-span-4 flex flex-col space-y-3 bg-dark-900/60 border border-slate-800/90 rounded-xl p-4 overflow-hidden">
-      <div class="flex items-center justify-between pb-2 border-b border-slate-800">
-        <h2 class="text-xs font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-2">
-          <i class="fa-solid fa-microchip"></i> Agent Execution & Cognitive Trace
-        </h2>
-        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
-          Fast/Idle Paths
-        </span>
-      </div>
-
-      <div class="flex-1 overflow-y-auto space-y-3 scrollbar-thin pr-1 max-h-[calc(100vh-220px)]" id="agent-brain-panel">
-        
-        <!-- Live Path Status -->
-        <div class="bg-dark-950/80 border border-slate-800/90 rounded-lg p-3">
-          <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between">
-            <span>Dual-Path Latency Engine</span>
-            <span class="text-emerald-400 font-mono text-[10px]">Zero Hot-Path LLM</span>
-          </div>
-          <div class="grid grid-cols-2 gap-2 text-xs">
-            <div class="bg-slate-900/90 p-2.5 rounded border border-slate-800">
-              <div class="text-[10px] text-slate-500 uppercase font-mono">Fast-Path (Outage)</div>
-              <div class="font-bold text-emerald-400 text-sm mt-0.5 flex items-center gap-1">
-                <i class="fa-solid fa-bolt text-xs"></i> 8 ms
-              </div>
-              <div class="text-[10px] text-slate-400 mt-1">Read-Only Recall & Ticket Gen</div>
-            </div>
-            <div class="bg-slate-900/90 p-2.5 rounded border border-slate-800">
-              <div class="text-[10px] text-slate-500 uppercase font-mono">Idle-Path (Post-Mortem)</div>
-              <div class="font-bold text-indigo-400 text-sm mt-0.5 flex items-center gap-1">
-                <i class="fa-solid fa-brain text-xs"></i> Async Worker
-              </div>
-              <div class="text-[10px] text-slate-400 mt-1">Groq JSON Schema Extraction</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Information Reduction Funnel Stats -->
-        <div class="bg-dark-950/80 border border-slate-800/90 rounded-lg p-3" id="reduction-stats-box">
-          <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between">
-            <span>Information Reduction Funnel</span>
-            <i class="fa-solid fa-filter text-slate-500"></i>
-          </div>
-          <div id="reduction-stats-content" class="text-xs text-slate-400 italic">
-            Compresses telemetry and strips casual chatter when ticket resolves.
-          </div>
-        </div>
-
-        <!-- Post-Mortem Extraction & Anti-Pattern Card -->
-        <div class="bg-dark-950/80 border border-slate-800/90 rounded-lg p-3" id="post-mortem-box">
-          <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between">
-            <span>Structured Post-Mortem (Hindsight Brain)</span>
-            <i class="fa-solid fa-book-bookmark text-slate-500"></i>
-          </div>
-          <div id="post-mortem-content" class="text-xs text-slate-400 italic">
-            Awaiting incident resolution to trigger Groq LLM synthesis...
-          </div>
-        </div>
-
-        <!-- Cognitive Activity Log / Trace -->
-        <div class="bg-dark-950/80 border border-slate-800/90 rounded-lg p-3">
-          <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between">
-            <span>Agent Cognitive Event Trace</span>
-            <i class="fa-solid fa-timeline text-slate-500"></i>
-          </div>
-          <div id="agent-trace-list" class="space-y-2 text-xs font-mono">
-            <div class="text-slate-500 italic text-[11px]">No events recorded yet.</div>
-          </div>
-        </div>
-
-      </div>
-    </section>
-
-  </main>
-
-  <!-- IDE Markdown Modal -->
-  <div id="md-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-6">
-    <div class="bg-dark-900 border border-slate-700 rounded-xl max-w-3xl w-full max-h-[85vh] flex flex-col shadow-2xl">
-      <div class="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <i class="fa-brands fa-markdown text-indigo-400 text-lg"></i>
-          <h3 class="font-semibold text-sm text-white">Agent Context Markdown (.incident_context.md)</h3>
-        </div>
-        <button onclick="closeMdModal()" class="text-slate-400 hover:text-white text-sm">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-      </div>
-      <div class="p-5 overflow-y-auto flex-1 font-mono text-xs text-slate-300 bg-dark-950 leading-relaxed whitespace-pre-wrap select-all" id="md-modal-content"></div>
-      <div class="px-5 py-3 border-t border-slate-800 flex justify-end gap-2 bg-dark-900">
-        <button onclick="copyModalContent()" class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-4 py-2 rounded-lg flex items-center gap-2">
-          <i class="fa-solid fa-copy"></i> Copy Markdown
-        </button>
-        <button onclick="closeMdModal()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-lg">
-          Close
-        </button>
-      </div>
     </div>
   </div>
 
+  <!-- JavaScript Application Logic -->
   <script>
     let tickets = [];
-    let selectedTicketId = null;
+    let activeModalTicket = null;
 
     async function fetchTickets() {
       try {
         const res = await fetch('/api/v1/tickets');
         if (!res.ok) return;
         tickets = await res.json();
-        document.getElementById('ticket-count').textContent = tickets.length;
-        renderTicketsList();
-        if (selectedTicketId) {
-          const updated = tickets.find(t => t.id === selectedTicketId);
-          if (updated) renderTicketDetail(updated);
-        } else if (tickets.length > 0) {
-          selectTicket(tickets[tickets.length - 1].id);
+        renderTicketsTable();
+        updateKpis();
+
+        // If modal is open, refresh active ticket details dynamically
+        if (activeModalTicket) {
+          const updated = tickets.find(t => t.id === activeModalTicket.id);
+          if (updated) populateModal(updated);
         }
       } catch (err) {
         console.error('Error fetching tickets:', err);
       }
     }
 
-    function renderTicketsList() {
-      const container = document.getElementById('tickets-container');
-      if (tickets.length === 0) {
-        container.innerHTML = `
-          <div class="p-8 text-center text-slate-500 bg-dark-900/50 rounded-xl border border-slate-800/80">
-            <i class="fa-solid fa-inbox text-3xl mb-2 text-slate-600"></i>
-            <p class="text-xs">No incidents recorded yet.</p>
-            <button onclick="triggerNovelIncident()" class="mt-3 text-xs text-indigo-400 hover:text-indigo-300 underline font-medium">Trigger Novel Outage</button>
-          </div>
+    function updateKpis() {
+      const p1Count = tickets.filter(t => t.severity === 'P1' && t.status === 'OPEN').length;
+      document.getElementById('kpi-p1-count').textContent = p1Count;
+      document.getElementById('kpi-total-count').textContent = tickets.length;
+      document.getElementById('badge-total-tickets').textContent = tickets.length;
+    }
+
+    function renderTicketsTable() {
+      const tbody = document.getElementById('tickets-table-body');
+      const query = (document.getElementById('filter-search').value || '').toLowerCase();
+
+      const filtered = tickets.filter(t => {
+        const str = `${t.id} ${t.service} ${t.title || ''} ${t.status}`.toLowerCase();
+        return str.includes(query);
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" class="py-8 text-center text-slate-400 text-xs">
+              No incident tickets matching filter.
+            </td>
+          </tr>
         `;
         return;
       }
 
-      container.innerHTML = tickets.slice().reverse().map(t => {
+      tbody.innerHTML = filtered.slice().reverse().map(t => {
         const isOpen = t.status === 'OPEN';
-        const isSelected = t.id === selectedTicketId;
-        const timeAgo = new Date(t.created_at).toLocaleTimeString();
+        const title = t.title || `${t.service} Service Outage`;
+        const region = t.region || 'us-east-1a';
+        const degradedPods = t.degraded_pods || '4 / 12 pods';
+        const p1Class = t.severity === 'P1' ? 'bg-rose-50 text-rose-600 border-rose-200' : 'bg-amber-50 text-amber-600 border-amber-200';
+
         return `
-          <div onclick="selectTicket('${t.id}')" class="p-3.5 rounded-xl cursor-pointer transition border ${isSelected ? 'bg-slate-800/90 border-indigo-500/80 ring-1 ring-indigo-500/30 shadow-lg' : 'bg-dark-900/60 hover:bg-slate-800/50 border-slate-800'}">
-            <div class="flex items-center justify-between mb-1.5">
-              <div class="flex items-center gap-1.5">
-                <span class="text-xs font-mono font-bold text-slate-200">${t.id}</span>
-                ${t.is_recurring ? `<span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">🧠 RECURRING</span>` : `<span class="text-[9px] font-medium px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">NOVEL</span>`}
-              </div>
-              <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full ${isOpen ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30 badge-open' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'}">
+          <tr onclick="openIncidentModal('${t.id}')" class="hover:bg-indigo-50/40 transition cursor-pointer group">
+            <td class="py-3 px-5 font-mono font-bold text-slate-900 group-hover:text-indigo-600">
+              #${t.id.replace('#', '')}
+            </td>
+            <td class="py-3 px-4">
+              <span class="font-mono text-[10px] font-semibold px-2 py-0.5 rounded border ${p1Class}">
+                ${t.severity} · CRITICAL
+              </span>
+            </td>
+            <td class="py-3 px-4 max-w-xs">
+              <div class="font-bold text-slate-800 truncate">${title}</div>
+              <div class="text-[11px] text-slate-400 truncate">${t.description || 'Service degraded during load spike'}</div>
+            </td>
+            <td class="py-3 px-4 font-mono text-slate-600">
+              ${t.service}
+            </td>
+            <td class="py-3 px-4 font-mono text-slate-500 text-[11px]">
+              ${region}
+            </td>
+            <td class="py-3 px-4 font-mono text-slate-600 text-[11px]">
+              ${degradedPods}
+            </td>
+            <td class="py-3 px-4">
+              <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full ${isOpen ? 'bg-rose-100 text-rose-700 badge-open' : 'bg-emerald-100 text-emerald-700'}">
                 ${t.status}
               </span>
-            </div>
-            <div class="text-xs font-semibold text-white truncate mb-1">${t.service}</div>
-            <div class="flex items-center justify-between text-[11px] text-slate-500">
-              <span class="font-mono text-rose-400/90 font-medium">${t.severity} Critical</span>
-              <span>${timeAgo}</span>
-            </div>
-          </div>
+            </td>
+            <td class="py-3 px-5 text-right">
+              <button class="text-xs text-indigo-600 group-hover:text-indigo-700 font-semibold flex items-center gap-1 ml-auto">
+                Inspect <i class="fa-solid fa-arrow-right text-[10px]"></i>
+              </button>
+            </td>
+          </tr>
         `;
       }).join('');
     }
 
-    function selectTicket(id) {
-      selectedTicketId = id;
-      renderTicketsList();
-      const ticket = tickets.find(t => t.id === id);
-      if (ticket) renderTicketDetail(ticket);
+    function filterTicketsTable() {
+      renderTicketsTable();
     }
 
-    function renderTicketDetail(t) {
-      const container = document.getElementById('ticket-workspace');
-      const isOpen = t.status === 'OPEN';
+    // =========================================================================
+    // DYNAMIC MODAL POPULATOR (MATCHING screen.png)
+    // =========================================================================
+    function openIncidentModal(ticketId) {
+      const ticket = tickets.find(t => t.id === ticketId);
+      if (!ticket) return;
 
-      container.innerHTML = `
-        <!-- Incident Header Card -->
-        <div class="bg-dark-900/90 border border-slate-800 rounded-xl p-4">
-          <div class="flex flex-wrap items-center justify-between gap-3 mb-2.5">
-            <div>
-              <div class="flex items-center gap-2">
-                <h2 class="text-base font-bold text-white">${t.id}</h2>
-                <span class="text-xs font-semibold px-2 py-0.5 rounded-full ${isOpen ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30 badge-open' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'}">
-                  ${t.status}
-                </span>
-                <span class="text-xs font-mono px-2 py-0.5 rounded bg-slate-800 text-rose-400 border border-slate-700 font-semibold">
-                  ${t.severity} CRITICAL
-                </span>
-                ${t.is_recurring ? `<span class="text-xs font-bold px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">🧠 RECURRING INCIDENT</span>` : ''}
-              </div>
-              <p class="text-xs text-slate-400 mt-1">Impacted Target: <span class="font-semibold text-slate-200">${t.service}</span> • Opened at ${new Date(t.created_at).toLocaleTimeString()}</p>
-            </div>
-
-            <div class="flex items-center gap-2">
-              <button onclick="viewContextMd('${t.id}')" class="text-xs bg-slate-800 hover:bg-slate-700 text-indigo-300 font-medium px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-1.5 transition">
-                <i class="fa-solid fa-code"></i> IDE context.md
-              </button>
-              ${isOpen ? `
-                <button onclick="resolveCurrentTicket('${t.id}')" class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 shadow-lg shadow-emerald-900/30 transition">
-                  <i class="fa-solid fa-check"></i> Resolve & Synthesize
-                </button>
-              ` : `
-                <span class="text-xs text-emerald-400 font-medium px-3 py-1.5 bg-emerald-950/40 border border-emerald-800/40 rounded-lg flex items-center gap-1.5">
-                  <i class="fa-solid fa-check-double"></i> Post-Mortem Retained
-                </span>
-              `}
-            </div>
-          </div>
-
-          <!-- IDE Quick Load Banner -->
-          <div class="bg-dark-950/90 border border-slate-800 rounded-lg px-3 py-2 flex items-center justify-between font-mono text-xs text-slate-300">
-            <span class="truncate pr-2"><span class="text-slate-500">$</span> curl -s http://localhost:8000/api/v1/tickets/${t.id}/context.md | claude</span>
-            <button onclick="navigator.clipboard.writeText('curl -s http://localhost:8000/api/v1/tickets/${t.id}/context.md | claude'); alert('Copied IDE curl command!');" class="text-slate-400 hover:text-white px-2 py-0.5 bg-slate-800 hover:bg-slate-700 rounded transition text-[11px] shrink-0">
-              <i class="fa-solid fa-copy"></i>
-            </button>
-          </div>
-        </div>
-
-        <!-- Hindsight Living Memory Banner -->
-        <div class="bg-dark-900/90 border ${t.is_recurring ? 'border-purple-500/50 bg-purple-950/10' : 'border-indigo-500/30'} rounded-xl p-4 relative overflow-hidden">
-          <div class="flex items-center justify-between mb-2">
-            <h3 class="text-xs font-semibold uppercase tracking-wider ${t.is_recurring ? 'text-purple-400' : 'text-indigo-400'} flex items-center gap-2">
-              <i class="fa-solid fa-brain"></i> Institutional Memory (Hindsight Recall)
-            </h3>
-            ${t.is_recurring ? `<span class="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/40">PAYOFF: Prior Runbook Injected</span>` : `<span class="text-[10px] text-slate-500 font-mono">Cold-Start Incident</span>`}
-          </div>
-
-          <div class="text-xs leading-relaxed text-slate-200 bg-dark-950/80 p-3 rounded-lg border border-slate-800/80 font-sans">
-            ${formatHindsightMemory(t.hindsight_runbook)}
-          </div>
-        </div>
-
-        <!-- Telemetry Logs Viewer -->
-        <div class="bg-dark-900/90 border border-slate-800 rounded-xl p-4">
-          <div class="flex items-center justify-between mb-2">
-            <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-              <i class="fa-solid fa-terminal text-slate-500"></i> Outage Telemetry Stream (${t.raw_logs ? t.raw_logs.length : 0} lines)
-            </h3>
-            <span class="text-[10px] text-slate-500 font-mono">In-Memory Ring Buffer</span>
-          </div>
-          <pre class="bg-dark-950 border border-slate-800/90 rounded-lg p-2.5 text-[11px] text-rose-300 font-mono overflow-x-auto max-h-32 leading-relaxed scrollbar-thin"><code>${(t.raw_logs || []).slice(-10).join('\n')}</code></pre>
-        </div>
-
-        <!-- Conversational Triage Thread (CRM Style) -->
-        <div class="bg-dark-900/90 border border-slate-800 rounded-xl p-4 flex flex-col flex-1">
-          <div class="flex items-center justify-between mb-2.5">
-            <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-300 flex items-center gap-2">
-              <i class="fa-solid fa-comments text-indigo-400"></i> Engineer Triage Channel (${(t.comments || []).length} messages)
-            </h3>
-            <span class="text-[10px] text-slate-500">Natural collaboration without intrusive bot chatter</span>
-          </div>
-
-          <div class="space-y-2.5 max-h-48 overflow-y-auto mb-3 pr-1 scrollbar-thin flex-1">
-            ${(t.comments && t.comments.length > 0) ? t.comments.map(c => renderChatBubble(c)).join('') : `
-              <div class="p-6 text-center text-slate-500 text-xs italic bg-dark-950/40 rounded-lg border border-slate-800/50">
-                No triage discussion yet. Simulate or add comments below.
-              </div>
-            `}
-          </div>
-
-          <!-- Message input -->
-          <form onsubmit="submitComment(event, '${t.id}')" class="flex gap-2 pt-2 border-t border-slate-800">
-            <input id="comment-author" type="text" placeholder="Author" value="Jane (SRE)" class="w-28 bg-dark-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500">
-            <input id="comment-text" type="text" placeholder="Add troubleshooting step or remediation action..." class="flex-1 bg-dark-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500" required>
-            <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium px-3.5 py-1.5 rounded-lg transition shrink-0 flex items-center gap-1.5">
-              <i class="fa-solid fa-paper-plane text-[10px]"></i> Send
-            </button>
-          </form>
-        </div>
-      `;
-
-      // Update Column 3: The Agent Brain & Cognitive Trace
-      renderAgentBrain(t);
+      activeModalTicket = ticket;
+      populateModal(ticket);
+      document.getElementById('incident-modal').classList.remove('hidden');
     }
 
-    function formatHindsightMemory(text) {
-      if (!text || text.includes('First occurrence: No prior runbook')) {
-        return `<span class="text-slate-400 italic">First occurrence: Zero prior institutional memory in Hindsight bank. Cold-start triage active.</span>`;
-      }
+    function populateModal(t) {
+      document.getElementById('modal-ticket-id').textContent = `#${t.id.replace('#', '')}`;
+      document.getElementById('modal-service-badge').textContent = t.service;
+      document.getElementById('modal-region-badge').textContent = t.region || 'us-east-1a';
+      document.getElementById('modal-severity-badge').textContent = `${t.severity} · CRITICAL`;
 
-      // Highlight Anti-Pattern and Verified Fix with visual callouts
-      let html = text;
-      html = html.replace(/Anti-Pattern Warning:\s*([^.\n]+(?:\.[^.\n]+)*)/gi, 
-        `<div class="mt-2.5 p-2.5 rounded bg-rose-950/50 border border-rose-800/60 text-rose-200">
-          <div class="font-bold text-[11px] text-rose-400 flex items-center gap-1.5 uppercase tracking-wide">
-            <i class="fa-solid fa-triangle-exclamation"></i> Anti-Pattern (What NOT to do):
-          </div>
-          <div class="mt-0.5 text-xs">$1</div>
-        </div>`
-      );
+      document.getElementById('modal-title').textContent = t.title || `Outage in ${t.service} Pods`;
+      document.getElementById('modal-description').textContent = t.description || 'Connections exhausted during load spike; transactions failing with timeout cascade.';
 
-      html = html.replace(/Verified Fix:\s*([^.\n]+(?:\.[^.\n]+)*)/gi, 
-        `<div class="mt-2.5 p-2.5 rounded bg-emerald-950/50 border border-emerald-800/60 text-emerald-200">
-          <div class="font-bold text-[11px] text-emerald-400 flex items-center gap-1.5 uppercase tracking-wide">
-            <i class="fa-solid fa-circle-check"></i> Verified Fix:
-          </div>
-          <div class="mt-0.5 text-xs">$1</div>
-        </div>`
-      );
+      document.getElementById('modal-degraded-pods').textContent = t.degraded_pods || '4 / 12 pods';
+      document.getElementById('modal-error-spike').textContent = t.error_spike || '+840% p99';
+      document.getElementById('modal-detection-source').textContent = t.detection_source || 'TEMPR v2';
 
-      return html;
-    }
-
-    function renderChatBubble(c) {
-      const isSystem = c.author === 'Autonomous Copilot';
-      const isJane = c.author.includes('Jane');
-      const time = c.timestamp ? new Date(c.timestamp).toLocaleTimeString() : '';
-      const avatarBg = isSystem ? 'bg-indigo-600' : (isJane ? 'bg-emerald-600' : 'bg-purple-600');
-      const avatarIcon = isSystem ? 'fa-robot' : 'fa-user';
-
-      return `
-        <div class="p-2.5 rounded-lg bg-dark-950 border border-slate-800/80 flex items-start gap-2.5">
-          <div class="w-6 h-6 rounded-full ${avatarBg} text-white text-[10px] flex items-center justify-center shrink-0 mt-0.5">
-            <i class="fa-solid ${avatarIcon}"></i>
-          </div>
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center justify-between mb-0.5">
-              <span class="text-xs font-bold text-slate-200">${c.author}</span>
-              <span class="text-[10px] text-slate-500 font-mono">${time}</span>
-            </div>
-            <div class="text-xs text-slate-300 leading-relaxed font-sans">${c.text}</div>
-          </div>
-        </div>
-      `;
-    }
-
-    function renderAgentBrain(t) {
-      // 1. Reduction Stats
-      const redBox = document.getElementById('reduction-stats-content');
-      if (t.reduction_stats) {
-        redBox.innerHTML = `
-          <div class="space-y-1.5">
-            <div class="flex justify-between text-slate-300">
-              <span>Raw Logs &rarr; Sanitized:</span>
-              <span class="font-mono text-emerald-400 font-bold">${t.reduction_stats.raw_logs_count} &rarr; ${t.reduction_stats.clean_logs_count} lines (${t.reduction_stats.log_compression_pct}% noise cut)</span>
-            </div>
-            <div class="flex justify-between text-slate-300">
-              <span>Triage Chat &rarr; Filtered:</span>
-              <span class="font-mono text-indigo-300 font-bold">${t.reduction_stats.raw_comments_count} &rarr; ${t.reduction_stats.clean_comments_count} action comments</span>
-            </div>
-            <div class="w-full bg-slate-800 rounded-full h-1.5 mt-2">
-              <div class="bg-gradient-to-r from-indigo-500 to-emerald-400 h-1.5 rounded-full" style="width: ${t.reduction_stats.log_compression_pct}%"></div>
-            </div>
-          </div>
+      // Blast radius pills
+      const blastRadiusContainer = document.getElementById('modal-blast-radius');
+      const blastItems = t.blast_radius && t.blast_radius.length > 0 ? t.blast_radius : ['payment-gateway:9042', 'cart-cache-redis.internal', 'notification-worker-pool'];
+      
+      blastRadiusContainer.innerHTML = blastItems.map((item, idx) => {
+        const dotColor = idx < 2 ? 'bg-rose-500' : 'bg-slate-400';
+        return `
+          <span class="bg-slate-100/90 text-slate-700 font-mono text-xs px-2.5 py-1 rounded border border-slate-200 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full ${dotColor}"></span> ${item}
+          </span>
         `;
+      }).join('');
+
+      // Root stack trace
+      const stackPre = document.getElementById('modal-stack-trace');
+      if (t.raw_logs && t.raw_logs.length > 0) {
+        stackPre.textContent = t.raw_logs.slice(0, 10).join('\n');
       } else {
-        redBox.innerHTML = `<span class="text-slate-500 italic">Available once ticket is marked RESOLVED.</span>`;
+        stackPre.textContent = `Redis::ConnectionPool::TimeoutError: Waited 2.000 sec, 0 pool tokens available\n  at checkout/db/redis.go:142 in AcquireClientWithRetry()\n  at checkout/handlers/cart.go:88 in CommitCartReservation()`;
       }
 
-      // 2. Post-Mortem Card
-      const pmBox = document.getElementById('post-mortem-content');
-      if (t.final_post_mortem) {
-        pmBox.innerHTML = `
-          <div class="space-y-2 text-xs">
-            <div class="p-2 rounded bg-slate-900 border border-slate-800">
-              <div class="text-[10px] font-bold text-slate-400 uppercase">Verified Root Cause:</div>
-              <div class="text-slate-200 mt-0.5">${t.final_post_mortem.root_cause}</div>
-            </div>
-            <div class="p-2 rounded bg-rose-950/40 border border-rose-900/50">
-              <div class="text-[10px] font-bold text-rose-400 uppercase flex items-center gap-1">
-                <i class="fa-solid fa-triangle-exclamation"></i> Anti-Pattern Warning:
-              </div>
-              <div class="text-rose-200 mt-0.5 font-medium">${t.final_post_mortem.anti_pattern_warning}</div>
-            </div>
-            <div class="p-2 rounded bg-emerald-950/40 border border-emerald-900/50">
-              <div class="text-[10px] font-bold text-emerald-400 uppercase flex items-center gap-1">
-                <i class="fa-solid fa-circle-check"></i> Verified Fix:
-              </div>
-              <div class="text-emerald-200 mt-0.5 font-medium">${t.final_post_mortem.verified_fix}</div>
-            </div>
-          </div>
-        `;
-      } else {
-        pmBox.innerHTML = `<span class="text-slate-500 italic">Synthesizing on ticket resolution via Groq LLM JSON mode...</span>`;
-      }
+      // Remediation patch
+      const patchPre = document.getElementById('modal-remediation-patch');
+      const patchText = t.remediation_patch || `# ${t.service}/k8s/deployment.yaml\n- REDIS_POOL_MAX_ACTIVE: 20\n+ REDIS_POOL_MAX_ACTIVE: 80\n+ REDIS_POOL_IDLE_TIMEOUT: 45s`;
+      
+      // Color diff lines nicely
+      patchPre.innerHTML = patchText.split('\n').map(line => {
+        if (line.startsWith('-')) return `<span class="text-rose-400">${escapeHtml(line)}</span>`;
+        if (line.startsWith('+')) return `<span class="text-emerald-400">${escapeHtml(line)}</span>`;
+        return `<span class="text-slate-400">${escapeHtml(line)}</span>`;
+      }).join('\n');
 
-      // 3. Cognitive Trace Events
-      const traceContainer = document.getElementById('agent-trace-list');
-      if (t.agent_trace && t.agent_trace.length > 0) {
-        traceContainer.innerHTML = t.agent_trace.map(tr => {
-          const isFast = tr.phase === 'FAST-PATH';
-          const isIdle = tr.phase === 'IDLE-PATH';
-          const badgeClass = isFast ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : (isIdle ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' : 'bg-slate-800 text-slate-400 border-slate-700');
-          const time = tr.timestamp ? new Date(tr.timestamp).toLocaleTimeString() : '';
+      // Hindsight Institutional Runbook
+      document.getElementById('modal-hindsight-runbook').textContent = t.hindsight_runbook || 'First occurrence: Zero prior institutional memory in Hindsight bank. Cold-start triage active.';
 
-          return `
-            <div class="p-2 rounded bg-dark-950 border border-slate-800/80">
-              <div class="flex items-center justify-between mb-1">
-                <span class="text-[9px] font-bold px-1.5 py-0.5 rounded border ${badgeClass}">${tr.phase}</span>
-                <span class="text-[10px] text-slate-500">${time}</span>
-              </div>
-              <div class="font-semibold text-slate-200 text-xs">${tr.event}</div>
-              <div class="text-[11px] text-slate-400 mt-0.5 leading-snug">${tr.detail}</div>
-            </div>
-          `;
-        }).join('');
+      // Resolve button state
+      const resolveBtn = document.getElementById('modal-btn-resolve');
+      if (t.status === 'RESOLVED') {
+        resolveBtn.innerHTML = `<i class="fa-solid fa-check-double text-emerald-400"></i> Incident Resolved`;
+        resolveBtn.className = "bg-slate-800 text-slate-300 font-medium px-4 py-2 rounded-lg text-xs flex items-center gap-2 shadow-xs cursor-default";
       } else {
-        traceContainer.innerHTML = `<span class="text-slate-500 italic">No events.</span>`;
+        resolveBtn.innerHTML = `<i class="fa-solid fa-check text-emerald-400"></i> Resolve Incident`;
+        resolveBtn.className = "bg-slate-950 hover:bg-slate-800 text-white font-medium px-4 py-2 rounded-lg text-xs flex items-center gap-2 shadow-xs transition active:scale-95 cursor-pointer";
       }
     }
 
-    async function submitComment(e, ticketId) {
-      e.preventDefault();
-      const author = document.getElementById('comment-author').value || 'On-Call SRE';
-      const textInput = document.getElementById('comment-text');
-      const text = textInput.value;
-      if (!text) return;
+    function closeIncidentModal() {
+      document.getElementById('incident-modal').classList.add('hidden');
+      activeModalTicket = null;
+    }
+
+    function escapeHtml(text) {
+      return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    function copyTextFromElement(elementId) {
+      const text = document.getElementById(elementId).innerText;
+      navigator.clipboard.writeText(text);
+      alert('Copied to clipboard!');
+    }
+
+    function copyContextCurl() {
+      if (!activeModalTicket) return;
+      const cmd = `curl -s http://localhost:8000/api/v1/tickets/${activeModalTicket.id}/context.md | claude`;
+      navigator.clipboard.writeText(cmd);
+      alert(`Copied agentic command to clipboard:\n${cmd}`);
+    }
+
+    async function resolveCurrentModalTicket() {
+      if (!activeModalTicket) return;
+      if (activeModalTicket.status === 'RESOLVED') return;
 
       try {
-        await fetch(`/api/v1/tickets/${ticketId}/comment`, {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({author, text})
-        });
-        textInput.value = '';
-        await fetchTickets();
-      } catch (err) {
-        alert('Failed to submit comment: ' + err);
-      }
-    }
-
-    async function resolveCurrentTicket(ticketId) {
-      updateStepper(3, "Synthesizing Post-Mortem via Groq LLM & Retaining in Hindsight...");
-      try {
-        const res = await fetch(`/api/v1/tickets/${ticketId}/resolve`, { method: 'POST' });
+        const res = await fetch(`/api/v1/tickets/${activeModalTicket.id}/resolve`, { method: 'POST' });
         await res.json();
+        alert(`Incident ${activeModalTicket.id} marked RESOLVED! Triggered Groq LLM post-mortem synthesis in background.`);
         await fetchTickets();
-        setTimeout(fetchTickets, 2000);
-        setTimeout(fetchTickets, 5000);
       } catch (err) {
         alert('Error resolving ticket: ' + err);
       }
     }
 
-    function resolveActiveTicket() {
-      if (!selectedTicketId) return alert('Select or trigger a ticket first!');
-      resolveCurrentTicket(selectedTicketId);
-    }
-
-    async function viewContextMd(ticketId) {
+    async function simulateReoccurFromModal() {
+      if (!activeModalTicket) return;
       try {
-        const res = await fetch(`/api/v1/tickets/${ticketId}/context.md`);
-        const text = await res.text();
-        document.getElementById('md-modal-content').textContent = text;
-        document.getElementById('md-modal').classList.remove('hidden');
-      } catch (err) {
-        alert('Failed to load markdown context: ' + err);
-      }
-    }
-
-    function closeMdModal() {
-      document.getElementById('md-modal').classList.add('hidden');
-    }
-
-    function copyModalContent() {
-      const text = document.getElementById('md-modal-content').textContent;
-      navigator.clipboard.writeText(text);
-      alert('Markdown context copied to clipboard!');
-    }
-
-    // SCENARIO WORKFLOWS
-    function updateStepper(stepNum, statusText) {
-      for (let i = 1; i <= 4; i++) {
-        const pill = document.getElementById(`step-pill-${i}`);
-        if (i < stepNum) {
-          pill.className = 'px-2.5 py-1 rounded bg-emerald-950/60 text-emerald-300 border border-emerald-800/40 flex items-center gap-1.5';
-        } else if (i === stepNum) {
-          pill.className = 'px-2.5 py-1 rounded bg-indigo-600 text-white font-semibold flex items-center gap-1.5 shadow-md shadow-indigo-500/20';
-        } else {
-          pill.className = 'px-2.5 py-1 rounded bg-slate-800 text-slate-400 flex items-center gap-1.5';
-        }
-      }
-      document.getElementById('demo-status-badge').textContent = statusText;
-    }
-
-    async function triggerNovelIncident() {
-      updateStepper(1, "Triggered Novel Outage (Cold Start)");
-      const res = await fetch('/api/v1/alerts/trigger', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          service: 'checkout-service',
-          error_type: 'Redis ConnectionPool timeout',
-          raw_logs: [
-            '2026-09-28T14:00:00 INFO Ingress traffic surge: 1200 req/s on /checkout',
-            '2026-09-28T14:00:01 ERROR ConnectionPool timeout: Max connections (10) exhausted under load',
-            '2026-09-28T14:00:02 ERROR ConnectionPool timeout: Max connections (10) exhausted under load',
-            '2026-09-28T14:00:02 ERROR ConnectionPool timeout: Max connections (10) exhausted under load',
-            '2026-09-28T14:00:03 ERROR ConnectionPool timeout: Max connections (10) exhausted under load'
-          ]
-        })
-      });
-      const data = await res.json();
-      await fetchTickets();
-      selectTicket(data.ticket_id);
-      return data.ticket_id;
-    }
-
-    async function simulateTriageChat() {
-      if (!selectedTicketId) return alert('Select or trigger a ticket first!');
-      updateStepper(2, "Simulating Engineer Triage Conversation...");
-      const id = selectedTicketId;
-
-      await fetch(`/api/v1/tickets/${id}/comment`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ author: 'Jane (SRE)', text: 'Saw the alert. Initiating rolling restart on checkout-service pods.' })
-      });
-      await fetchTickets();
-
-      await new Promise(r => setTimeout(r, 600));
-      await fetch(`/api/v1/tickets/${id}/comment`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ author: 'Bob (Infra)', text: 'Restart completed, but errors re-triggered immediately. Still crashing.' })
-      });
-      await fetchTickets();
-
-      await new Promise(r => setTimeout(r, 600));
-      await fetch(`/api/v1/tickets/${id}/comment`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ author: 'Jane (SRE)', text: 'Connection pool is starving. Patched Helm values to scale max_connections from 10 to 50.' })
-      });
-      await fetchTickets();
-
-      await new Promise(r => setTimeout(r, 600));
-      await fetch(`/api/v1/tickets/${id}/comment`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ author: 'Bob (Infra)', text: 'Traffic stabilized. 200 OKs verified across ingress. Problem resolved.' })
-      });
-      await fetchTickets();
-    }
-
-    async function triggerRecurringIncident() {
-      updateStepper(4, "Triggered Recurring Outage (Hindsight Living Memory Injected!)");
-      const res = await fetch('/api/v1/alerts/trigger', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          service: 'checkout-service',
-          error_type: 'Redis ConnectionPool timeout',
-          raw_logs: [
-            '2026-10-15T09:00:00 INFO Peak traffic spike detected',
-            '2026-10-15T09:00:01 ERROR ConnectionPool timeout: Max connections (10) exhausted under load'
-          ]
-        })
-      });
-      const data = await res.json();
-      await fetchTickets();
-      selectTicket(data.ticket_id);
-    }
-
-    async function resetDemoEnvironment() {
-      if (!confirm('Reset all demo tickets and clear memory bank?')) return;
-      await fetch('/api/v1/demo/reset', { method: 'POST' });
-      selectedTicketId = null;
-      updateStepper(1, "Environment reset to cold start.");
-      await fetchTickets();
-    }
-
-    async function runCompleteScenario() {
-      const btn = document.getElementById('btn-auto-demo');
-      btn.disabled = true;
-      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Running Scenario...`;
-
-      try {
-        // Step 0: Reset
-        await fetch('/api/v1/demo/reset', { method: 'POST' });
-        await fetchTickets();
-
-        // Step 1: Novel Incident
-        const t1_id = await triggerNovelIncident();
-        await new Promise(r => setTimeout(r, 1500));
-
-        // Step 2: Triage Chat
-        await simulateTriageChat();
-        await new Promise(r => setTimeout(r, 1500));
-
-        // Step 3: Resolve Ticket & Idle-Path Synthesis
-        await resolveCurrentTicket(t1_id);
-        await new Promise(r => setTimeout(r, 4000));
-
-        // Step 4: Recurring Outage Weeks Later
-        await triggerRecurringIncident();
-        await new Promise(r => setTimeout(r, 1000));
-
-        document.getElementById('demo-status-badge').innerHTML = `
-          <span class="text-emerald-400 font-bold">✨ Full Scenario Complete! Notice Living Memory & Anti-Pattern Injected into INC-102.</span>
-        `;
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = `<i class="fa-solid fa-play"></i> Run E2E Novel &rarr; Recurring Demo`;
-      }
-    }
-
-    // REAL-TIME APPLICATION CONTROLS
-    async function pollRealtimeMetrics() {
-      try {
-        const res = await fetch('/api/v1/realtime/status');
-        if (!res.ok) return;
+        const res = await fetch('/api/v1/alerts/trigger', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            service: activeModalTicket.service,
+            error_type: 'Redis ConnectionPool timeout',
+            title: activeModalTicket.title,
+            description: activeModalTicket.description,
+            region: activeModalTicket.region,
+            degraded_pods: activeModalTicket.degraded_pods,
+            error_spike: activeModalTicket.error_spike,
+            detection_source: 'TEMPR v2',
+            blast_radius: activeModalTicket.blast_radius,
+            remediation_patch: activeModalTicket.remediation_patch,
+            raw_logs: [
+              '2026-10-15T09:00:00 INFO Peak traffic spike detected',
+              '2026-10-15T09:00:01 ERROR ConnectionPool timeout: Max connections exhausted under load'
+            ]
+          })
+        });
         const data = await res.json();
-        const display = document.getElementById('live-pool-display');
-        if (data.online && data.metrics) {
-          display.textContent = `${data.metrics.active_connections} active / ${data.metrics.max_connections} max`;
-          if (data.metrics.active_connections >= data.metrics.max_connections) {
-            display.className = "font-mono font-bold text-rose-400 animate-pulse";
-          } else {
-            display.className = "font-mono font-bold text-emerald-400";
-          }
-        } else {
-          display.textContent = "Offline";
-          display.className = "font-mono text-slate-500";
-        }
+        alert(`Recurring incident triggered (${data.ticket_id})! Notice Hindsight memory automatically injected.`);
+        await fetchTickets();
+        openIncidentModal(data.ticket_id);
       } catch (err) {
-        // silent
+        alert('Error: ' + err);
       }
     }
 
+    function handoffIncident() {
+      if (!activeModalTicket) return;
+      const handoffText = `[INCIDENT HANDOFF: ${activeModalTicket.id}]\nService: ${activeModalTicket.service}\nTitle: ${activeModalTicket.title}\nSeverity: ${activeModalTicket.severity}\nStatus: ${activeModalTicket.status}\nRunbook: ${activeModalTicket.hindsight_runbook || 'None'}`;
+      navigator.clipboard.writeText(handoffText);
+      alert(`Handoff brief copied to clipboard!\n\n${handoffText}`);
+    }
+
+    // REAL-TIME INTEGRATION
     async function injectRealtimeSurge() {
       try {
         const res = await fetch('/api/v1/realtime/surge', { method: 'POST' });
         const data = await res.json();
         const f = data.results['504_timeout'];
         const s = data.results['200_ok'];
-        alert(`Surge dispatched: ${s} OK, ${f} ConnectionPool timeouts! Watch the log tailer catch the crash and create a ticket in real-time.`);
+        alert(`Real traffic surge dispatched to checkout-service:8050\n• 200 OKs: ${s}\n• 504 Timeouts: ${f}\n\nLog tailer intercepted the failure and automatically created an incident!`);
         await fetchTickets();
       } catch (err) {
-        alert('Error triggering real-time surge: ' + err);
-      }
-    }
-
-    async function injectRealtimeRestart() {
-      try {
-        await fetch('/api/v1/realtime/restart', { method: 'POST' });
-        alert('Pod rolling restart simulated on live microservice! Notice active pool remains constrained at 10.');
-      } catch (err) {
         alert('Error: ' + err);
       }
     }
 
-    async function injectRealtimeHelmPatch() {
+    async function pollRealtimeMetrics() {
       try {
-        await fetch('/api/v1/realtime/patch-helm', { method: 'POST' });
-        alert('Helm patch applied on live microservice: Connection pool scaled to 50!');
-        await pollRealtimeMetrics();
-      } catch (err) {
-        alert('Error: ' + err);
-      }
+        const res = await fetch('/api/v1/realtime/status');
+        if (!res.ok) return;
+        const data = await res.json();
+        const badge = document.getElementById('pool-metric-badge');
+        if (data.online && data.metrics) {
+          badge.textContent = `${data.metrics.active_connections} active / ${data.metrics.max_connections} max`;
+          badge.className = data.metrics.active_connections >= data.metrics.max_connections ? "font-bold text-rose-600 animate-pulse" : "font-bold text-slate-900";
+        }
+      } catch (err) {}
     }
 
-    // Initialize and live poll every 2.5 seconds
+    // Initialize
     fetchTickets();
     pollRealtimeMetrics();
     setInterval(fetchTickets, 3000);

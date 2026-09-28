@@ -14,9 +14,106 @@ from watcher import BackgroundLogWatcher
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 log_watcher = BackgroundLogWatcher(buffer_size=100, debounce_window_sec=30.0)
 
+def seed_initial_tickets():
+    """Seeds realistic production incident tickets so the CRM has active incidents."""
+    if TICKETS:
+        return
+
+    now = datetime.now(timezone.utc)
+    t104 = Ticket(
+        id="INC-104",
+        service="checkout-service",
+        severity="P1",
+        status="OPEN",
+        created_at=now,
+        title="Redis Pool Starvation in checkout-service Pods",
+        description="Connections exhausted during flash checkout load spike; transactions failing with timeout cascade to upstream payment router.",
+        region="us-east-1a",
+        degraded_pods="4 / 12 pods",
+        error_spike="+840% p99",
+        detection_source="TEMPR v2",
+        blast_radius=["payment-gateway:9042", "cart-cache-redis.internal", "notification-worker-pool"],
+        raw_logs=[
+            "Redis::ConnectionPool::TimeoutError: Waited 2.000 sec, 0 pool tokens available",
+            "  at checkout/db/redis.go:142 in AcquireClientWithRetry()",
+            "  at checkout/handlers/cart.go:88 in CommitCartReservation()"
+        ],
+        remediation_patch="""# checkout-service/k8s/deployment.yaml
+- REDIS_POOL_MAX_ACTIVE: 20
++ REDIS_POOL_MAX_ACTIVE: 80
++ REDIS_POOL_IDLE_TIMEOUT: 45s""",
+        comments=[
+            {"author": "Jane (SRE)", "text": "Saw the alert. Initiating rolling restart on checkout-service pods.", "timestamp": now.isoformat()},
+            {"author": "Bob (Infra)", "text": "Restart completed, but errors re-triggered immediately. Still crashing.", "timestamp": now.isoformat()}
+        ],
+        hindsight_runbook="Past fix on checkout-service: Patched Helm values to scale max_connections from 20 to 80. Anti-pattern warning: Do not perform rolling restarts; they re-trigger connection pool exhaustion.",
+        is_recurring=True,
+        agent_trace=[
+            {"phase": "FAST-PATH", "timestamp": now.isoformat(), "event": "Outage Signal Ingested", "detail": "TEMPR v2 alert stream debounced."},
+            {"phase": "FAST-PATH", "timestamp": now.isoformat(), "event": "Living Memory Injected", "detail": "Recalled prior runbook & anti-pattern."}
+        ]
+    )
+
+    t103 = Ticket(
+        id="INC-103",
+        service="payment-gateway",
+        severity="P1",
+        status="OPEN",
+        created_at=now,
+        title="Upstream HTTP 504 Timeout Cascade",
+        description="Payment router thread exhaustion propagating from database lock contention on checkout balances.",
+        region="us-east-1b",
+        degraded_pods="6 / 18 pods",
+        error_spike="+420% p99",
+        detection_source="WATCHER v3",
+        blast_radius=["order-processor:8080", "stripe-egress-proxy"],
+        raw_logs=[
+            "Gateway::HTTPTimeout: Upstream read timeout after 5000ms on /v1/charge",
+            "  at payment/handlers/charge.go:54 in DispatchPaymentRequest()"
+        ],
+        remediation_patch="""# payment-gateway/config/timeouts.json
+- UPSTREAM_TIMEOUT_MS: 5000
++ UPSTREAM_TIMEOUT_MS: 12000
++ CIRCUIT_BREAKER_TRIP_COUNT: 10""",
+        comments=[{"author": "DevOps", "text": "Circuit breaker tripped. Investigating balance DB latency.", "timestamp": now.isoformat()}],
+        hindsight_runbook="Past fix on payment-gateway: Raised upstream timeout from 5000ms to 12000ms and adjusted circuit breaker thresholds.",
+        is_recurring=True
+    )
+
+    t102 = Ticket(
+        id="INC-102",
+        service="auth-service",
+        severity="P2",
+        status="RESOLVED",
+        created_at=now,
+        title="JWT Token Verification Latency Spike",
+        description="Public key cache invalidation loop causing unthrottled JWKS endpoint requests.",
+        region="us-west-2a",
+        degraded_pods="2 / 8 pods",
+        error_spike="+180% p99",
+        detection_source="HINDSIGHT",
+        blast_radius=["api-gateway", "session-manager"],
+        raw_logs=[
+            "Auth::JWKSCacheMiss: Key ID 'key_2026_09' expired; fetching remote jwks.json",
+            "  at auth/cache/jwks.go:32 in GetPublicKeyWithTTL()"
+        ],
+        remediation_patch="""# auth-service/env.yaml
+- JWKS_CACHE_TTL_SEC: 60
++ JWKS_CACHE_TTL_SEC: 3600""",
+        comments=[{"author": "SecOps", "text": "Patched JWKS cache TTL from 60s to 3600s. Cache hit ratio restored.", "timestamp": now.isoformat()}],
+        hindsight_runbook="Verified Fix: Bumped JWKS_CACHE_TTL_SEC to 3600 to prevent cache stampedes.",
+        is_recurring=False
+    )
+
+    TICKETS[t102.id] = t102
+    TICKETS[t103.id] = t103
+    TICKETS[t104.id] = t104
+    print(f"[*] Seeded {len(TICKETS)} production incident tickets into environment.")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_bank()
+    seed_initial_tickets()
     yield
 
 app = FastAPI(title="Autonomous Incident Copilot", lifespan=lifespan)
@@ -74,6 +171,19 @@ def trigger_alert(payload: AlertTriggerPayload):
         }
     ]
 
+    # Dynamic metadata extraction based on error type and service
+    title = payload.title or f"{payload.error_type} in {payload.service} Pods"
+    description = payload.description or f"Failure detected during load spike on {payload.service}; transactions encountering error cascade."
+    region = payload.region or "us-east-1a"
+    degraded_pods = payload.degraded_pods or "4 / 12 pods"
+    error_spike = payload.error_spike or "+840% p99"
+    detection_source = payload.detection_source or "TEMPR v2"
+    blast_radius = payload.blast_radius or ["payment-gateway:9042", "cart-cache-redis.internal", "notification-worker-pool"]
+    remediation_patch = payload.remediation_patch or """# checkout-service/k8s/deployment.yaml
+- REDIS_POOL_MAX_ACTIVE: 20
++ REDIS_POOL_MAX_ACTIVE: 80
++ REDIS_POOL_IDLE_TIMEOUT: 45s"""
+
     ticket = Ticket(
         id=ticket_id,
         service=payload.service,
@@ -81,6 +191,14 @@ def trigger_alert(payload: AlertTriggerPayload):
         status="OPEN",
         created_at=now,
         raw_logs=payload.raw_logs,
+        title=title,
+        description=description,
+        region=region,
+        degraded_pods=degraded_pods,
+        error_spike=error_spike,
+        detection_source=detection_source,
+        blast_radius=blast_radius,
+        remediation_patch=remediation_patch,
         comments=[],
         hindsight_runbook=recalled_runbook or "First occurrence: No prior runbook found in Hindsight.",
         is_recurring=is_recurring,
