@@ -141,9 +141,20 @@ def get_dashboard():
         "tickets_count": len(TICKETS)
     }
 
+def get_next_ticket_id() -> str:
+    existing_nums = []
+    for tid in TICKETS.keys():
+        if tid.startswith("INC-"):
+            try:
+                existing_nums.append(int(tid.split("-")[1]))
+            except ValueError:
+                pass
+    next_num = max(existing_nums) + 1 if existing_nums else 101
+    return f"INC-{next_num}"
+
 @app.post("/api/v1/alerts/trigger", status_code=201)
 def trigger_alert(payload: AlertTriggerPayload):
-    ticket_id = f"INC-{len(TICKETS) + 101}"
+    ticket_id = get_next_ticket_id()
 
     # Fast-Path: Query Hindsight memory (Read-Only)
     recalled_runbook = recall_memory(payload.service, payload.error_type)

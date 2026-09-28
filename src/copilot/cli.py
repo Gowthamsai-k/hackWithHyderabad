@@ -159,7 +159,7 @@ def main():
         start_watcher()
     elif cmd_lower == "run":
         if len(sys.argv) < 3:
-            print("Error: Missing command to run. Example: copilot run python3 main.py")
+            print("Error: Missing command to run. Example: /hr run python3 main.py")
             sys.exit(1)
         run_project(sys.argv[2:])
     else:
@@ -167,7 +167,7 @@ def main():
         if len(target) == 1:
             file_arg = target[0]
             if file_arg.endswith(".py"):
-                exec_cmd = ["python3", file_arg]
+                exec_cmd = [sys.executable, file_arg]
             elif file_arg.endswith(".java"):
                 class_name = os.path.basename(file_arg)[:-5]
                 dir_name = os.path.dirname(file_arg) or "."
