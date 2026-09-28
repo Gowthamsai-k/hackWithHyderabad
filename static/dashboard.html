@@ -6,6 +6,7 @@
   <title>Incident Management Portal | Production SRE CRM</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script>
     tailwind.config = {
       theme: {
@@ -33,6 +34,65 @@
     .scrollbar-thin::-webkit-scrollbar-thumb {
       background: #cbd5e1;
       border-radius: 9999px;
+    }
+    /* Markdown Prose Renderer Styles */
+    .prose-content h1 {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #0f172a;
+      margin-bottom: 0.75rem;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 0.4rem;
+    }
+    .prose-content h2 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #1e293b;
+      margin-top: 1.25rem;
+      margin-bottom: 0.5rem;
+    }
+    .prose-content blockquote {
+      border-left: 3px solid #6366f1;
+      padding-left: 0.75rem;
+      font-style: italic;
+      color: #64748b;
+      margin: 0.6rem 0;
+      background: #f8fafc;
+      padding: 0.4rem 0.75rem;
+      border-radius: 0 0.375rem 0.375rem 0;
+    }
+    .prose-content ul {
+      list-style-type: disc;
+      padding-left: 1.25rem;
+      margin: 0.5rem 0;
+    }
+    .prose-content li {
+      margin-bottom: 0.35rem;
+    }
+    .prose-content pre {
+      background-color: #020617 !important;
+      color: #f1f5f9 !important;
+      padding: 0.85rem !important;
+      border-radius: 0.5rem !important;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', monospace !important;
+      font-size: 0.75rem !important;
+      line-height: 1.45;
+      margin: 0.6rem 0;
+      border: 1px solid #1e293b;
+    }
+    .prose-content code {
+      font-family: 'JetBrains Mono', monospace;
+      background-color: #f1f5f9;
+      color: #4338ca;
+      padding: 0.15rem 0.3rem;
+      border-radius: 0.25rem;
+      font-size: 0.75rem;
+    }
+    .prose-content pre code {
+      background-color: transparent !important;
+      color: inherit !important;
+      padding: 0 !important;
     }
   </style>
 </head>
@@ -126,9 +186,9 @@
         </div>
 
         <div class="flex items-center gap-2">
-          <!-- context.md Copy button -->
-          <button onclick="copyContextCurl()" class="border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 text-xs px-3 py-1 rounded-md flex items-center gap-1.5 shadow-2xs font-mono font-medium transition cursor-pointer">
-            <i class="fa-regular fa-file-code text-slate-400"></i> context.md <i class="fa-regular fa-copy text-slate-400 ml-1"></i> Copy
+          <!-- context.md Button (triggers markdown pop-up) -->
+          <button onclick="openContextModal()" class="border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 text-xs px-3 py-1 rounded-md flex items-center gap-1.5 shadow-2xs font-mono font-medium transition cursor-pointer hover:border-indigo-300">
+            <i class="fa-regular fa-file-code text-indigo-600"></i> context.md <i class="fa-regular fa-eye text-slate-400 ml-1"></i> View
           </button>
           <!-- Severity Badge -->
           <span id="modal-severity-badge" class="bg-rose-50 text-rose-600 border border-rose-200 font-mono text-xs font-semibold px-2.5 py-1 rounded-md uppercase tracking-wider">
@@ -250,6 +310,71 @@
         <div>
           <button id="modal-btn-resolve" onclick="resolveCurrentModalTicket()" class="bg-slate-950 hover:bg-slate-800 text-white font-medium px-4 py-2 rounded-lg text-xs flex items-center gap-2 shadow-xs transition active:scale-95 cursor-pointer">
             <i class="fa-solid fa-check text-emerald-400"></i> Resolve Incident
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- PARSED CONTEXT.MD MARKDOWN POP-UP MODAL                                   -->
+  <!-- ========================================================================= -->
+  <div id="context-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-60 hidden flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-3xl w-full my-8 flex flex-col overflow-hidden font-sans">
+      
+      <!-- Modal Header -->
+      <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/80">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+            <i class="fa-brands fa-markdown text-base"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <span id="context-modal-title">INCIDENT CONTEXT</span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">context.md</span>
+            </h3>
+            <p class="text-[11px] text-slate-500">Rendered markdown representation for Claude Code, Cursor, and IDE agents</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <!-- View Toggle -->
+          <div class="flex bg-slate-200/80 p-0.5 rounded-lg text-xs font-medium">
+            <button id="btn-view-rendered" onclick="switchContextTab('rendered')" class="px-2.5 py-1 rounded-md bg-white text-slate-800 shadow-xs text-xs font-semibold cursor-pointer">
+              <i class="fa-solid fa-eye text-[10px] mr-1 text-indigo-600"></i> Preview
+            </button>
+            <button id="btn-view-raw" onclick="switchContextTab('raw')" class="px-2.5 py-1 rounded-md text-slate-600 hover:text-slate-900 text-xs cursor-pointer">
+              <i class="fa-solid fa-code text-[10px] mr-1"></i> Raw MD
+            </button>
+          </div>
+
+          <button onclick="closeContextModal()" class="text-slate-400 hover:text-slate-600 w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-200/50 transition cursor-pointer ml-1">
+            <i class="fa-solid fa-xmark text-sm"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Modal Body (Rendered HTML Markdown vs Raw MD) -->
+      <div class="p-6 overflow-y-auto max-h-[60vh] scrollbar-thin">
+        <!-- Rendered Container (Styled via marked.js) -->
+        <div id="context-rendered-view" class="prose-content space-y-3 text-xs leading-relaxed text-slate-700"></div>
+
+        <!-- Raw Text Container -->
+        <pre id="context-raw-view" class="hidden bg-slate-950 text-slate-200 p-4 rounded-xl font-mono text-xs leading-relaxed whitespace-pre-wrap select-all overflow-x-auto"></pre>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-6 py-3.5 border-t border-slate-200 flex items-center justify-between bg-slate-50/80">
+        <div class="text-[11px] font-mono text-slate-500 truncate mr-2">
+          <span class="text-slate-400">$</span> <span id="context-curl-hint">curl -s http://localhost:8000/api/v1/tickets/.../context.md | claude</span>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <button onclick="copyContextCurlCommand()" class="text-xs bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg font-medium shadow-2xs transition flex items-center gap-1.5 cursor-pointer">
+            <i class="fa-solid fa-terminal text-slate-400"></i> Copy curl
+          </button>
+          <button onclick="copyContextRawMarkdown()" class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-1.5 rounded-lg font-medium shadow-xs transition flex items-center gap-1.5 cursor-pointer">
+            <i class="fa-regular fa-copy"></i> Copy Markdown
           </button>
         </div>
       </div>
@@ -464,11 +589,71 @@
       alert('Copied to clipboard!');
     }
 
-    function copyContextCurl() {
+    // =========================================================================
+    // CONTEXT.MD PARSED MARKDOWN MODAL LOGIC
+    // =========================================================================
+    let currentRawContextMarkdown = "";
+
+    async function openContextModal() {
+      if (!activeModalTicket) return;
+      try {
+        const res = await fetch(`/api/v1/tickets/${activeModalTicket.id}/context.md`);
+        if (!res.ok) throw new Error("Could not load context.md");
+        currentRawContextMarkdown = await res.text();
+
+        document.getElementById('context-modal-title').textContent = `${activeModalTicket.id} (${activeModalTicket.service})`;
+        document.getElementById('context-raw-view').textContent = currentRawContextMarkdown;
+        document.getElementById('context-curl-hint').textContent = `curl -s http://localhost:8000/api/v1/tickets/${activeModalTicket.id}/context.md | claude`;
+
+        // Parse markdown with marked.js
+        const renderedContainer = document.getElementById('context-rendered-view');
+        if (typeof marked !== 'undefined') {
+          renderedContainer.innerHTML = marked.parse(currentRawContextMarkdown);
+        } else {
+          renderedContainer.innerHTML = `<pre class="p-3 bg-slate-950 text-slate-100 rounded-lg font-mono">${escapeHtml(currentRawContextMarkdown)}</pre>`;
+        }
+
+        switchContextTab('rendered');
+        document.getElementById('context-modal').classList.remove('hidden');
+      } catch (err) {
+        alert("Failed to load context.md: " + err);
+      }
+    }
+
+    function closeContextModal() {
+      document.getElementById('context-modal').classList.add('hidden');
+    }
+
+    function switchContextTab(tab) {
+      const renderedView = document.getElementById('context-rendered-view');
+      const rawView = document.getElementById('context-raw-view');
+      const btnRendered = document.getElementById('btn-view-rendered');
+      const btnRaw = document.getElementById('btn-view-raw');
+
+      if (tab === 'rendered') {
+        renderedView.classList.remove('hidden');
+        rawView.classList.add('hidden');
+        btnRendered.className = "px-2.5 py-1 rounded-md bg-white text-slate-800 shadow-xs text-xs font-semibold cursor-pointer";
+        btnRaw.className = "px-2.5 py-1 rounded-md text-slate-600 hover:text-slate-900 text-xs cursor-pointer";
+      } else {
+        renderedView.classList.add('hidden');
+        rawView.classList.remove('hidden');
+        btnRaw.className = "px-2.5 py-1 rounded-md bg-white text-slate-800 shadow-xs text-xs font-semibold cursor-pointer";
+        btnRendered.className = "px-2.5 py-1 rounded-md text-slate-600 hover:text-slate-900 text-xs cursor-pointer";
+      }
+    }
+
+    function copyContextCurlCommand() {
       if (!activeModalTicket) return;
       const cmd = `curl -s http://localhost:8000/api/v1/tickets/${activeModalTicket.id}/context.md | claude`;
       navigator.clipboard.writeText(cmd);
-      alert(`Copied agentic command to clipboard:\n${cmd}`);
+      alert(`Copied agentic terminal command:\n${cmd}`);
+    }
+
+    function copyContextRawMarkdown() {
+      if (!currentRawContextMarkdown) return;
+      navigator.clipboard.writeText(currentRawContextMarkdown);
+      alert("Raw Markdown copied to clipboard!");
     }
 
     async function resolveCurrentModalTicket() {
