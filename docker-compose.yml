@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  incident-copilot:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - HINDSIGHT_BASE_URL=${HINDSIGHT_BASE_URL:-https://api.hindsight.vectorize.io}
+      - HINDSIGHT_API_KEY=${HINDSIGHT_API_KEY}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - BANK_ID=${BANK_ID:-incident-ops-bank}
+    env_file:
+      - .env
+    restart: unless-stopped
