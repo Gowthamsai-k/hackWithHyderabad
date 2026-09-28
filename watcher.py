@@ -5,7 +5,7 @@ from collections import deque
 from typing import Optional, List, Dict, Callable
 
 CRASH_REGEX = re.compile(
-    r"(ERROR|FATAL|CRITICAL|Exception|ConnectionPool timeout|ConnectionTimeout|OOMKilled|504 Gateway Timeout)",
+    r"(ERROR|FATAL|CRITICAL|Exception|ConnectionPool timeout|ConnectionTimeout|OOMKilled|504 Gateway Timeout|IndexOutOfBoundsException|ArrayIndexOutOfBoundsException|NullPointerException)",
     re.IGNORECASE
 )
 

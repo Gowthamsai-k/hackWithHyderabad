@@ -3,3 +3,5 @@ __pycache__/
 *.pyc
 .venv/
 .incident_context.md
+*.class
+sample_service/*.log
