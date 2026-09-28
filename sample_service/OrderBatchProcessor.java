@@ -13,7 +13,7 @@ public class OrderBatchProcessor {
 
         try {
             // INTENTIONAL BOUNDARY BUG: i <= orders.length causes ArrayIndexOutOfBoundsException
-            for (int i = 0; i <= orders.length; i++) {
+            for (int i = -1; i <= orders.length; i++) {
                 log("INFO", "Dispatching order index [" + i + "]: " + orders[i]);
             }
             log("INFO", "Batch processing completed successfully.");
