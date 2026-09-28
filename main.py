@@ -257,10 +257,47 @@ def get_hindsight_memories():
         "memories": get_all_memories()
     }
 
+@app.get("/api/v1/realtime/status")
+def get_realtime_app_status():
+    """Polls real-time checkout-service metrics on port 8050."""
+    import requests
+    try:
+        res = requests.get("http://127.0.0.1:8050/metrics", timeout=1.0)
+        return {"online": True, "metrics": res.json()}
+    except Exception:
+        return {"online": False, "metrics": None}
+
+@app.post("/api/v1/realtime/surge")
+def trigger_realtime_surge(concurrency: int = 25):
+    """Triggers real concurrent traffic against the checkout-service."""
+    from sample_service.traffic_generator import generate_traffic_surge
+    result = generate_traffic_surge(concurrency)
+    return {"status": "surge_completed", "results": result}
+
+@app.post("/api/v1/realtime/restart")
+def trigger_realtime_restart():
+    """Triggers rolling restart simulation on the checkout-service."""
+    from sample_service.traffic_generator import apply_rolling_restart
+    result = apply_rolling_restart()
+    return {"status": "restarted", "result": result}
+
+@app.post("/api/v1/realtime/patch-helm")
+def trigger_realtime_helm_patch(pool_size: int = 50):
+    """Applies Helm values patch to scale pool on checkout-service."""
+    from sample_service.traffic_generator import apply_helm_patch
+    result = apply_helm_patch(pool_size)
+    return {"status": "patched", "result": result}
+
 @app.post("/api/v1/demo/reset")
 def reset_demo():
     """Resets all tickets and clears memory bank for a fresh demo."""
+    import requests
     TICKETS.clear()
     reset_memory_bank()
     log_watcher.clear()
+    # Reset pool size back to 10
+    try:
+        requests.post("http://127.0.0.1:8050/admin/scale-pool", params={"new_pool_size": 10}, timeout=1.0)
+    except Exception:
+        pass
     return {"status": "demo_environment_reset"}
