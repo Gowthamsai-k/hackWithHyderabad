@@ -1,6 +1,7 @@
 import os
 import json
 import re
+from typing import Optional, List, Dict, Any, Tuple
 from datetime import datetime, timezone
 from dotenv import load_dotenv
 from groq import Groq
@@ -34,8 +35,8 @@ def clean_llm_json(raw_text: str) -> dict:
 def _heuristic_post_mortem(service: str, filtered_logs: list, filtered_chat: list) -> PostMortemExtraction:
     """Fallback extraction if Groq API key is not configured or unavailable."""
     failed_steps = []
-    verified_fix = "Scaled capacity and patched service configuration"
-    anti_pattern = "Avoid unverified rolling restarts during pool exhaustion"
+    verified_fix = "Applied exception handling guard and updated service configuration"
+    anti_pattern = "DO NOT ignore uncaught exceptions or suppress error stack traces."
 
     for msg in filtered_chat:
         text = msg.get("text", "")
@@ -45,15 +46,15 @@ def _heuristic_post_mortem(service: str, filtered_logs: list, filtered_chat: lis
         elif "patch" in text.lower() or "scale" in text.lower() or "pool" in text.lower() or "helm" in text.lower():
             verified_fix = text
 
-    root_cause = f"Resource starvation and connection exhaustion under ingress surge for {service}."
+    root_cause = f"Unhandled runtime error in {service}."
     for line in filtered_logs:
-        if "ERROR" in line:
-            root_cause = line.split("ERROR")[-1].strip()
+        if "ERROR" in line or "Exception" in line:
+            root_cause = line.strip()
             break
 
     return PostMortemExtraction(
         root_cause=root_cause,
-        failed_attempts=failed_steps if failed_steps else ["Rolling restart on active service"],
+        failed_attempts=failed_steps if failed_steps else ["Unverified manual process restart"],
         verified_fix=verified_fix,
         anti_pattern_warning=anti_pattern
     )
@@ -111,114 +112,66 @@ Output raw JSON only. Ensure the output is valid JSON format.
     retain_post_mortem(ticket_id, service, post_mortem, closed_at, bank_id=bank_id, extra_metadata=extra_metadata)
     return post_mortem
 
-def synthesize_remediation_and_anti_pattern(service: str, error_type: str, raw_logs: list) -> tuple[str, str, str]:
+def _extract_stack_trace_info(logs_text: str, default_filename: str = "app.py") -> tuple[str, str]:
+    """Parses stack trace to extract actual target filename and line number."""
+    m_java = re.search(r'at\s+[\w\.\$]+\(([\w]+\.java):(\d+)\)', logs_text)
+    if m_java:
+        return m_java.group(1), m_java.group(2)
+        
+    m_py = re.search(r'File "([^"]+)", line (\d+)', logs_text)
+    if m_py:
+        return os.path.basename(m_py.group(1)), m_py.group(2)
+
+    return default_filename, "1"
+
+def _extract_learnt_outcome(recalled_text: str) -> tuple[Optional[str], Optional[str]]:
+    """Extracts verified fix and anti-pattern warning from recalled Hindsight memory text."""
+    if not recalled_text or "No prior" in recalled_text or "First occurrence" in recalled_text:
+        return None, None
+    
+    fix = None
+    anti = None
+
+    # Search for Verified Fix
+    fix_m = re.search(r"(?:✅ \*\*Verified Fix:\*\*|Verified Fix:)\s*(.+)", recalled_text)
+    if fix_m:
+        fix = fix_m.group(1).strip()
+
+    # Search for Anti-Pattern Warning
+    anti_m = re.search(r"(?:⚠️ \*\*Anti-Pattern Warning:\*\*|Anti-Pattern Warning:|Anti-Pattern:)\s*(.+)", recalled_text)
+    if anti_m:
+        anti = anti_m.group(1).strip()
+
+    if not fix and recalled_text.strip():
+        fix = recalled_text.strip()
+
+    return fix, anti
+
+def synthesize_remediation_and_anti_pattern(
+    service: str, 
+    error_type: str, 
+    raw_logs: list,
+    recalled_runbook: str = None
+) -> tuple[str, str, str]:
     """
-    Synthesizes a tailored unified-diff remediation patch and anti-pattern warning
-    for incoming crash alerts. Uses Groq LLM dynamically; otherwise applies
-    context-aware heuristic patterns based on the language and stack trace.
+    Synthesizes remediation patch and anti-pattern WITHOUT using LLM.
+    - First-time incident: Explicitly states it is the first time and no prior learnt outcome is available.
+    - Second-time incident onwards: Learns from the first time by attaching the learnt outcome (verified fix) from memory.
     """
-    logs_text = "\n".join(raw_logs[-20:]) if raw_logs else ""
-    lower_logs = logs_text.lower()
-    lower_err = (error_type or "").lower()
+    has_prior_memory = bool(recalled_runbook and "No prior" not in recalled_runbook and "First occurrence" not in recalled_runbook)
 
-    if groq_client:
-        prompt = f"""You are an expert SRE and Software Engineer. A runtime crash occurred in service '{service}'.
-Error Type: {error_type}
-Recent Logs & Stack Trace:
-{logs_text}
-
-Provide:
-1. remediation_patch: A unified diff (diff format with - and + lines) showing the exact code or config fix needed.
-2. anti_pattern: A clear directive stating what NOT to do (e.g. "DO NOT ...").
-3. anti_pattern_rationale: 1-2 sentences explaining why that anti-pattern fails or worsens the issue.
-
-Respond with valid JSON matching:
-{{
-  "remediation_patch": "...",
-  "anti_pattern": "...",
-  "anti_pattern_rationale": "..."
-}}
-Output raw JSON only. Ensure the output is valid JSON format.
-"""
-        try:
-            model_to_use = get_env_var("GROQ_MODEL", "qwen/qwen3.8-27b")
-            response = groq_client.chat.completions.create(
-                model=model_to_use,
-                messages=[{"role": "user", "content": prompt}],
-                response_format={"type": "json_object"}
-            )
-            data = clean_llm_json(response.choices[0].message.content)
-            patch = data.get("remediation_patch", "").strip()
-            anti = data.get("anti_pattern", "").strip()
-            rationale = data.get("anti_pattern_rationale", "").strip()
-            if patch and anti:
-                return patch, anti, rationale
-        except Exception as e:
-            print(f"[!] Groq patch generation failed ({e}). Using context-aware heuristic.")
-
-    # Context-aware fallback based on stack trace / language
-    if any(k in lower_err or k in lower_logs for k in ["indexoutofbound", "outofbounds", "indexerror"]):
-        m = re.search(r"at\s+([\w\.\$]+)\.([\w\$]+)\(([\w]+\.java):(\d+)\)", logs_text)
-        file_ref = m.group(3) if m else "App.java"
-        line_ref = m.group(4) if m else "1"
-        patch = f"""// {file_ref} (around line {line_ref})
-- for (int i = 0; i <= items.length; i++) {{
-+ for (int i = 0; i < items.length; i++) {{"""
-        anti = "DO NOT suppress IndexOutOfBoundsException with empty try-catch blocks."
-        rationale = "Suppressing bounds exceptions masks batch truncation, causing silent data drops and unfulfilled operations."
-        return patch, anti, rationale
-
-    elif "nullpointerexception" in lower_err or "nullpointer" in lower_logs:
-        m = re.search(r"at\s+([\w\.\$]+)\.([\w\$]+)\(([\w]+\.java):(\d+)\)", logs_text)
-        file_ref = m.group(3) if m else "App.java"
-        line_ref = m.group(4) if m else "1"
-        patch = f"""// {file_ref} (around line {line_ref})
-- return target.process();
-+ if (target == null) {{
-+     logger.warn("Target instance is null; returning default");
-+     return Optional.empty();
-+ }}
-+ return Optional.of(target.process());"""
-        anti = "DO NOT catch generic java.lang.Throwable or java.lang.Exception to ignore NPE."
-        rationale = "Catching generic exceptions conceals missing dependencies or uninitialized state, causing zombie threads."
-        return patch, anti, rationale
-
-    elif "zerodivisionerror" in lower_err or "division by zero" in lower_logs:
-        patch = """# math/calculation.py
-- return numerator / denominator
-+ if denominator == 0:
-+     return 0.0
-+ return numerator / denominator"""
-        anti = "DO NOT catch ZeroDivisionError without returning a sensible default."
-        rationale = "Swallowing ZeroDivisionError leaves downstream calculations in an undefined state."
-        return patch, anti, rationale
-
-    elif "keyerror" in lower_err:
-        patch = """# handler.py
-- value = data['target_key']
-+ value = data.get('target_key', default_fallback)"""
-        anti = "DO NOT disable dictionary schema validation."
-        rationale = "Allowing malformed JSON payloads bypasses downstream data contract guarantees."
-        return patch, anti, rationale
-
-    elif "redis" in lower_logs or "connectionpool" in lower_logs or "connection timeout" in lower_logs:
-        patch = """# config/deployment.yaml
-- POOL_MAX_ACTIVE: 20
-+ POOL_MAX_ACTIVE: 80
-+ POOL_IDLE_TIMEOUT: 45s"""
-        anti = "DO NOT perform rolling pod restarts."
-        rationale = "Rolling restarts under active load re-trigger immediate socket starvation and drop in-flight transactions."
-        return patch, anti, rationale
-
-    # Generic fallback
-    patch = f"""// {service} error remediation
-- // Unchecked invocation
-+ try {{
-+     validateInput(request);
-+     executeSafe(request);
-+ }} catch ({error_type or 'Exception'} ex) {{
-+     logger.error("Handled boundary failure: " + ex.getMessage());
-+ }}"""
-    anti = "DO NOT restart the service container blindly without fixing the root cause."
-    rationale = "Container restarts under identical load conditions replay the crash loop and degrade cluster availability."
-    return patch, anti, rationale
+    if has_prior_memory:
+        fix, anti = _extract_learnt_outcome(recalled_runbook)
+        if fix:
+            patch = f"[Learnt Outcome from Incident History]\nVerified Fix: {fix}"
+        else:
+            patch = f"[Learnt Outcome from Incident History]\n{recalled_runbook}"
+        
+        anti_pattern = anti or "DO NOT repeat failed operational procedures from past outages."
+        rationale = f"Learnt outcome retrieved from institutional memory for service '{service}'."
+        return patch, anti_pattern, rationale
+    else:
+        patch = f"First-time incident observed for service '{service}'. No prior institutional memory or learnt outcome available."
+        anti_pattern = f"First-time incident on '{service}': Avoid manual unverified code/config changes without root-cause analysis."
+        rationale = f"First-time failure signatures require post-mortem analysis upon resolution to capture institutional runbooks."
+        return patch, anti_pattern, rationale

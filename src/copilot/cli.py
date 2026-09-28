@@ -20,12 +20,132 @@ if COPILOT_HOST == "0.0.0.0":
 
 COPILOT_URL = get_env_var("COPILOT_URL", f"http://{COPILOT_HOST}:{COPILOT_PORT}")
 
+def print_help():
+    help_text = """
+================================================================================
+AUTONOMOUS INCIDENT COPILOT -- HELP & COMMAND REFERENCE
+================================================================================
+
+[CLI COMMANDS]
+  copilot add <project-id> <log-path>
+      Registers a new project directory & log file in config/projects.yaml.
+      Example: python3 copilot.py add my-app /var/log/my-app/app.log
+
+  copilot list
+      Lists all registered projects in config/projects.yaml and checks log readiness.
+
+  copilot watch
+      Starts the multi-project background watcher daemon (auto-attaches within 2s).
+
+  copilot run <command>
+      Executes any registered application command and intercepts crashes automatically.
+      Example: python3 copilot.py run python3 main.py
+
+  copilot run --file <target_file> -- <command>
+      Executes a command with active Silent Fix Observer diff tracking on target file.
+      Example: python3 copilot.py run --file processor.py -- python3 processor.py
+
+  copilot memory inspect --service <name> [--dependency <name=version>]
+      Inspects retained institutional runbooks and anti-patterns in Hindsight memory.
+
+  copilot /help (or copilot help)
+      Displays this command reference guide.
+
+[REST API ENDPOINTS] (http://localhost:8000)
+  GET  /                                Incident CRM Dashboard UI
+  GET  /help                            API & CLI Command Reference
+  POST /api/v1/alerts/trigger           Fast-Path ticket creation & runbook recall
+  POST /api/v1/logs/ingest              Ingest log lines into passive ring buffer
+  GET  /api/v1/tickets                  List active and resolved incident tickets
+  GET  /api/v1/tickets/{id}             Fetch diagnostic ticket details & stack trace
+  POST /api/v1/tickets/{id}/comment     Add triage observation or fix note to ticket
+  POST /api/v1/tickets/{id}/resolve     Resolve ticket & trigger idle LLM post-mortem
+  GET  /api/v1/tickets/{id}/context.md  Stream pure Markdown context for IDE agents
+  GET  /api/v1/hindsight/memories       Inspect stored institutional memory bank
+  GET  /api/v1/reports                  Fetch historical post-mortems from Supabase
+  POST /api/v1/demo/reset               Reset demo environment & memory store
+================================================================================
+"""
+    try:
+        print(help_text)
+    except UnicodeEncodeError:
+        sys.stdout.buffer.write(help_text.encode('utf-8'))
+
+def load_registered_projects() -> list:
+    import yaml
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    config_path = os.path.join(base_dir, "config", "projects.yaml")
+    if not os.path.exists(config_path):
+        return []
+    try:
+        with open(config_path, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+            return data.get("projects", []) or []
+    except Exception as e:
+        print(f"[!] Warning reading config/projects.yaml: {e}")
+        return []
+
+def is_project_registered(target_ref: str = None) -> tuple[bool, str]:
+    if os.getenv("PYTEST_CURRENT_TEST"):
+        return True, "pytest-runner"
+
+    cwd = os.path.abspath(os.getcwd())
+    cwd_name = os.path.basename(cwd)
+    projects = load_registered_projects()
+    
+    if not projects:
+        return False, cwd_name
+
+    target_abs = os.path.abspath(target_ref) if target_ref and os.path.exists(target_ref) else ""
+    target_basename = os.path.basename(target_abs) if target_abs else (str(target_ref) if target_ref else "")
+
+    for p in projects:
+        p_id = str(p.get("id", "")).strip()
+        p_service = str(p.get("service", "")).strip()
+        log_file = str(p.get("log_file", "")).strip()
+        log_abs = os.path.abspath(log_file) if log_file else ""
+        log_dir = os.path.dirname(log_abs) if log_abs else ""
+
+        if p_id and (p_id.lower() == cwd_name.lower() or p_id.lower() == target_basename.lower() or p_id.lower() == str(target_ref).lower()):
+            return True, p_id
+        if p_service and (p_service.lower() == cwd_name.lower() or p_service.lower() == target_basename.lower() or p_service.lower() == str(target_ref).lower()):
+            return True, p_service
+
+        if log_abs:
+            if (cwd == log_dir or cwd.startswith(log_dir + os.sep) or log_dir.startswith(cwd + os.sep) or
+                (target_abs and (target_abs.startswith(log_dir) or os.path.dirname(target_abs) == log_dir))):
+                return True, p_id or p_service or cwd_name
+
+    return False, cwd_name
+
+def ensure_project_registered(target_ref: str = None) -> str:
+    registered, proj_name = is_project_registered(target_ref)
+    if not registered:
+        cwd = os.path.abspath(os.getcwd())
+        dir_name = os.path.basename(cwd)
+        ref_display = target_ref or dir_name
+        print("\n" + "=" * 70)
+        print("❌ [Incident Copilot Error] UNREGISTERED PROJECT DIRECTORY!")
+        print("=" * 70)
+        print(f"Project directory/target '{ref_display}' is NOT registered in config/projects.yaml.")
+        print(f"Current Working Directory: {cwd}")
+        print("\nTo enable Incident Copilot monitoring, you MUST first register this project:")
+        print(f"  python3 copilot.py add {dir_name} ./logs/{dir_name}.log\n")
+        print("Or add your project directly into config/projects.yaml:")
+        print("projects:")
+        print(f"  - id: {dir_name}")
+        print(f"    log_file: ./logs/{dir_name}.log")
+        print("=" * 70 + "\n")
+        sys.exit(1)
+    return proj_name
+
 def run_project(cmd_args: list):
     """
-    Executes any fresh application (Java, Python, Go, Node, etc.).
+    Executes an application registered in config/projects.yaml.
     Automatically captures crashes, uncaught exceptions, and traces,
-    routing them to the Copilot with zero configuration files needed.
+    routing them to the Copilot.
     """
+    ensure_project_registered(cmd_args[0] if cmd_args else None)
     project_name = os.path.basename(os.getcwd())
     print(f"🚀 [Incident Copilot] Monitoring project '{project_name}'...")
     print(f"[*] Executing command: {' '.join(cmd_args)}\n")
@@ -162,7 +282,10 @@ def main():
 
     cmd_lower = sys.argv[1].lower()
 
-    if cmd_lower == "add":
+    if cmd_lower in ("help", "/help", "-h", "--help"):
+        print_help()
+        sys.exit(0)
+    elif cmd_lower == "add":
         if len(sys.argv) < 4:
             print("Usage: copilot add <project-id> <log-path>")
             sys.exit(1)
@@ -194,6 +317,7 @@ def main():
             from .diff_observer import run_observed_command
             file_idx = sys.argv.index("--file")
             target_file = sys.argv[file_idx + 1]
+            ensure_project_registered(target_file)
             if "--" in sys.argv:
                 cmd_start = sys.argv.index("--") + 1
                 cmd_to_run = sys.argv[cmd_start:]

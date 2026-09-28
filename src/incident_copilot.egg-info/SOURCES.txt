@@ -2,11 +2,13 @@ README.md
 pyproject.toml
 src/copilot/__init__.py
 src/copilot/cli.py
+src/copilot/diff_observer.py
 src/copilot/filters.py
 src/copilot/hindsight_service.py
 src/copilot/main.py
 src/copilot/project_watcher.py
 src/copilot/schemas.py
+src/copilot/supabase_service.py
 src/copilot/synthesizer.py
 src/copilot/watcher.py
 src/incident_copilot.egg-info/PKG-INFO
@@ -16,3 +18,4 @@ src/incident_copilot.egg-info/entry_points.txt
 src/incident_copilot.egg-info/requires.txt
 src/incident_copilot.egg-info/top_level.txt
 tests/test_copilot.py
+tests/test_diff_observer_and_metadata.py

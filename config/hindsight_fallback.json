@@ -1,0 +1,84 @@
+[
+  {
+    "ticket_id": "INC-101",
+    "service": "auth-service",
+    "content": "Incident [INC-101] on 'auth-service'. Runtime: 3.13.14. Dependencies: {}. Git: HEAD. Root Cause: JWT signing secret expired causing InvalidSignature errors. Verified Fix: Rotated secret key via vault patch. Failed Attempts: . Anti-Pattern Warning: None",
+    "closed_at": "2026-09-28T18:26:41.834560+00:00",
+    "metadata": {
+      "ticket_id": "INC-101",
+      "service": "auth-service",
+      "git_commit": "HEAD",
+      "runtime": "3.13.14",
+      "type": "verified_post_mortem",
+      "os": "Windows",
+      "os_release": "11",
+      "arch": "AMD64",
+      "python_version": "3.13.14"
+    },
+    "retained_live": false
+  },
+  {
+    "ticket_id": "INC-102",
+    "service": "cart-microservice",
+    "content": "Incident [INC-102] on 'cart-microservice'. Runtime: 3.13.14. Dependencies: {}. Git: HEAD. Root Cause: ERROR CartRedis pool size 10 exhausted. Verified Fix: Scaled pool to 40 in helm patch_v1. Failed Attempts: Unverified manual process restart. Anti-Pattern Warning: DO NOT ignore uncaught exceptions or suppress error stack traces.",
+    "closed_at": "2026-09-28T18:26:42.651331+00:00",
+    "metadata": {
+      "ticket_id": "INC-102",
+      "service": "cart-microservice",
+      "git_commit": "HEAD",
+      "runtime": "3.13.14",
+      "type": "verified_post_mortem",
+      "os": "Windows",
+      "os_release": "11",
+      "arch": "AMD64",
+      "python_version": "3.13.14"
+    },
+    "retained_live": false
+  },
+  {
+    "ticket_id": "INC-102",
+    "service": "cart-microservice",
+    "content": "Incident [INC-102] on 'cart-microservice'. Runtime: 3.13.14. Dependencies: {}. Git: HEAD. Root Cause: Pool size 10 exhausted. Verified Fix: Fix_V1: Scaled Redis pool to 40. Failed Attempts: Pod restart. Anti-Pattern Warning: Do not perform rolling restarts",
+    "closed_at": "2026-09-28T10:00:00+00:00",
+    "metadata": {
+      "ticket_id": "INC-102",
+      "service": "cart-microservice",
+      "git_commit": "HEAD",
+      "runtime": "3.13.14",
+      "type": "verified_post_mortem"
+    },
+    "retained_live": true
+  },
+  {
+    "ticket_id": "INC-103",
+    "service": "cart-microservice",
+    "content": "Incident [INC-103] on 'cart-microservice'. Runtime: 3.13.14. Dependencies: {}. Git: HEAD. Root Cause: Redis connection pool exhaustion in the cart-microservice triggered by a traffic surge, where the default pool size of 40 was insufficient to handle concurrent requests.. Verified Fix: Scaled the Redis connection pool size from 40 to 120 and increased the timeout duration to 60 seconds.. Failed Attempts: . Anti-Pattern Warning: Do not deploy services with static, low-size connection pools (e.g., 40) that do not account for traffic surges; ensure pool sizing and timeouts are load-tested against peak expected concurrency.",
+    "closed_at": "2026-09-28T18:26:46.805966+00:00",
+    "metadata": {
+      "ticket_id": "INC-103",
+      "service": "cart-microservice",
+      "git_commit": "HEAD",
+      "runtime": "3.13.14",
+      "type": "verified_post_mortem",
+      "os": "Windows",
+      "os_release": "11",
+      "arch": "AMD64",
+      "python_version": "3.13.14"
+    },
+    "retained_live": false
+  },
+  {
+    "ticket_id": "INC-103",
+    "service": "cart-microservice",
+    "content": "Incident [INC-103] on 'cart-microservice'. Runtime: 3.13.14. Dependencies: {}. Git: HEAD. Root Cause: Pool size 40 exhausted under surge. Verified Fix: Fix_V2: Scaled Redis pool to 120 and set timeout to 60s. Failed Attempts: Flush cache. Anti-Pattern Warning: Do not lower timeout below 30s",
+    "closed_at": "2026-09-28T12:00:00+00:00",
+    "metadata": {
+      "ticket_id": "INC-103",
+      "service": "cart-microservice",
+      "git_commit": "HEAD",
+      "runtime": "3.13.14",
+      "type": "verified_post_mortem"
+    },
+    "retained_live": true
+  }
+]

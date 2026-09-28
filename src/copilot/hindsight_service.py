@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import re
 import platform
 from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any, Union
@@ -22,8 +23,28 @@ BANK_ID = get_env_var("BANK_ID", "incident-ops-bank")
 
 client = Hindsight(base_url=HINDSIGHT_URL, api_key=HINDSIGHT_API_KEY)
 
-# In-memory fallback repository in case external Hindsight server is unavailable/unconfigured
-_FALLBACK_MEMORY_STORE: List[Dict[str, Any]] = []
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+HINDSIGHT_CACHE_FILE = os.path.join(BASE_DIR, "config", "hindsight_fallback.json")
+
+def _load_hindsight_disk_cache() -> List[Dict[str, Any]]:
+    if os.path.exists(HINDSIGHT_CACHE_FILE):
+        try:
+            with open(HINDSIGHT_CACHE_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                return data if isinstance(data, list) else []
+        except Exception as e:
+            print(f"[!] Warning loading Hindsight fallback memory from disk: {e}")
+    return []
+
+def _save_hindsight_disk_cache(cache_list: List[Dict[str, Any]]):
+    try:
+        os.makedirs(os.path.dirname(HINDSIGHT_CACHE_FILE), exist_ok=True)
+        with open(HINDSIGHT_CACHE_FILE, "w", encoding="utf-8") as f:
+            json.dump(cache_list, f, indent=2, default=str)
+    except Exception as e:
+        print(f"[!] Warning saving Hindsight fallback memory to disk: {e}")
+
+_FALLBACK_MEMORY_STORE: List[Dict[str, Any]] = _load_hindsight_disk_cache()
 
 def get_system_metadata() -> Dict[str, Any]:
     """Dynamically gathers system architecture, Python version, and OS info."""
@@ -50,13 +71,64 @@ def init_bank(bank_id: Optional[str] = None):
     except Exception as e:
         print(f"[*] Hindsight bank init notice for '{target_bank}': {e}")
 
+def _parse_item_timestamp(item: Dict[str, Any]) -> datetime:
+    ts = item.get("closed_at") or item.get("timestamp")
+    if isinstance(ts, datetime):
+        return ts.replace(tzinfo=timezone.utc) if ts.tzinfo is None else ts
+    elif isinstance(ts, str):
+        try:
+            return datetime.fromisoformat(ts.replace("Z", "+00:00"))
+        except Exception:
+            pass
+    return datetime.min.replace(tzinfo=timezone.utc)
+
+def format_runbook_memory_text(raw_text: str) -> str:
+    """Formats raw Hindsight post-mortem text into clean structured bullet points."""
+    if not raw_text or not raw_text.strip():
+        return raw_text
+
+    inc_m = re.search(r"Incident\s+\[(.*?)\]\s+on\s+'(.*?)'", raw_text)
+    ticket_ref = inc_m.group(1) if inc_m else None
+    service_ref = inc_m.group(2) if inc_m else None
+
+    runtime_m = re.search(r"Runtime:\s*(.*?)\.\s*Dependencies:", raw_text)
+    runtime = runtime_m.group(1) if runtime_m else None
+
+    git_m = re.search(r"Git:\s*(.*?)\.\s*Root Cause:", raw_text)
+    git = git_m.group(1) if git_m else None
+
+    cause_m = re.search(r"Root Cause:\s*(.*?)\.\.?\s*Verified Fix:", raw_text)
+    root_cause = cause_m.group(1) if cause_m else None
+
+    fix_m = re.search(r"Verified Fix:\s*(.*?)\.\.?\s*(?:Failed Attempts:|Anti-Pattern Warning:)", raw_text)
+    verified_fix = fix_m.group(1) if fix_m else None
+
+    anti_m = re.search(r"Anti-Pattern Warning:\s*(.*)", raw_text)
+    anti_warning = anti_m.group(1).strip() if anti_m else None
+
+    lines = []
+    if ticket_ref and service_ref:
+        lines.append(f"📌 **Incident Reference:** `{ticket_ref}` (`{service_ref}`)")
+    if runtime or git:
+        lines.append(f"⚙️ **Environment Metadata:** Runtime `{runtime or 'unknown'}` | Git `{git or 'HEAD'}`")
+    if root_cause:
+        lines.append(f"🔍 **Root Cause:** {root_cause.strip()}")
+    if verified_fix:
+        lines.append(f"✅ **Verified Fix:** {verified_fix.strip()}")
+    if anti_warning:
+        lines.append(f"⚠️ **Anti-Pattern Warning:** {anti_warning.strip()}")
+
+    if lines:
+        return "\n".join([f"• {l}" for l in lines])
+    return raw_text
+
 def recall_memory(
     service: str, 
     error_type: str, 
     bank_id: Optional[str] = None,
     dependency: Optional[str] = None
 ) -> Optional[str]:
-    """Queries Hindsight using multi-arm retrieval (Semantic + BM25 + Graph)."""
+    """Queries Hindsight using multi-arm retrieval, prioritizing the most recent incident resolutions."""
     target_bank = bank_id or get_env_var("BANK_ID", "incident-ops-bank")
     
     query_str = f"Past fixes, root causes, architecture changes, and failed attempts for {service} encountering {error_type}"
@@ -71,21 +143,48 @@ def recall_memory(
             budget="high"
         )
         if memories and memories.results:
-            results_text = [f"- {r.text}" for r in memories.results[:3] if r.text]
-            if results_text:
-                return "\n".join(results_text)
+            matching_results = []
+            for r in memories.results:
+                if not r.text:
+                    continue
+                r_meta = getattr(r, "metadata", {}) or {}
+                r_service = r_meta.get("service") if isinstance(r_meta, dict) else None
+                if r_service:
+                    if r_service.lower() == service.lower():
+                        matching_results.append(format_runbook_memory_text(r.text))
+                else:
+                    text_lower = r.text.lower()
+                    svc_lower = service.lower()
+                    if f"'{svc_lower}'" in text_lower or f"on '{svc_lower}'" in text_lower or f"service '{svc_lower}'" in text_lower:
+                        matching_results.append(format_runbook_memory_text(r.text))
+
+            if matching_results:
+                return "\n\n".join(matching_results[:3])
     except Exception as e:
         print(f"[!] Hindsight live recall failed: {e}")
 
-    # 2. Check fallback memory store
+    # 2. Check fallback memory store (sorted descending by timestamp to prioritize latest incident fixes)
     fallback_matches = [
-        item["content"] for item in _FALLBACK_MEMORY_STORE
-        if item.get("service") == service or service.lower() in item.get("content", "").lower()
+        item for item in _FALLBACK_MEMORY_STORE
+        if item.get("service") == service
     ]
     if fallback_matches:
-        return "\n".join([f"- {m}" for m in fallback_matches[:3]])
+        sorted_matches = sorted(fallback_matches, key=_parse_item_timestamp, reverse=True)
+        return "\n\n".join([format_runbook_memory_text(m['content']) for m in sorted_matches[:3]])
 
     return None
+
+def get_latest_memory_for_service(service: str) -> Optional[Dict[str, Any]]:
+    """Returns the most recent retained post-mortem item for a service."""
+    fallback_matches = [
+        item for item in _FALLBACK_MEMORY_STORE
+        if item.get("service") == service
+    ]
+    if not fallback_matches:
+        return None
+    sorted_matches = sorted(fallback_matches, key=_parse_item_timestamp, reverse=True)
+    return sorted_matches[0]
+
 
 def retain_post_mortem(
     ticket_id: str, 
@@ -164,10 +263,11 @@ def retain_post_mortem(
         "ticket_id": ticket_id,
         "service": service,
         "content": content,
-        "closed_at": closed_at,
+        "closed_at": (closed_at.isoformat() if isinstance(closed_at, datetime) else str(closed_at)),
         "metadata": metadata_payload,
         "retained_live": retained_live
     })
+    _save_hindsight_disk_cache(_FALLBACK_MEMORY_STORE)
     print(f"[*] Recorded post-mortem in knowledge store for ticket {ticket_id}")
 
 def get_all_memories() -> List[Dict[str, Any]]:
@@ -176,4 +276,9 @@ def get_all_memories() -> List[Dict[str, Any]]:
 def reset_memory_bank():
     global _FALLBACK_MEMORY_STORE
     _FALLBACK_MEMORY_STORE.clear()
+    if os.path.exists(HINDSIGHT_CACHE_FILE):
+        try:
+            os.remove(HINDSIGHT_CACHE_FILE)
+        except Exception:
+            pass
     print("[*] Memory bank cleared.")

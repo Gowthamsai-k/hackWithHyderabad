@@ -1,0 +1,67 @@
+[
+  {
+    "ticket_id": "INC-101",
+    "service": "auth-service",
+    "title": "JWT::InvalidSignature in auth-service",
+    "root_cause": "JWT signing secret expired causing InvalidSignature errors",
+    "verified_fix": "Rotated secret key via vault patch",
+    "anti_pattern": "None",
+    "failed_attempts": [],
+    "environment_metadata": {
+      "os": "Windows",
+      "os_release": "11",
+      "arch": "AMD64",
+      "python_version": "3.13.14"
+    },
+    "raw_logs_sample": [
+      "2026-09-28 ERROR JWT::InvalidSignature: secret expired"
+    ],
+    "created_at": "2026-09-28T18:26:41.815565+00:00",
+    "closed_at": "2026-09-28T18:26:41.834560+00:00",
+    "persisted_to_supabase": true
+  },
+  {
+    "ticket_id": "INC-102",
+    "service": "cart-microservice",
+    "title": "ConnectionPoolExhaustion in cart-microservice",
+    "root_cause": "ERROR CartRedis pool size 10 exhausted",
+    "verified_fix": "Scaled pool to 40 in helm patch_v1",
+    "anti_pattern": "DO NOT ignore uncaught exceptions or suppress error stack traces.",
+    "failed_attempts": [
+      "Unverified manual process restart"
+    ],
+    "environment_metadata": {
+      "os": "Windows",
+      "os_release": "11",
+      "arch": "AMD64",
+      "python_version": "3.13.14"
+    },
+    "raw_logs_sample": [
+      "ERROR CartRedis pool size 10 exhausted"
+    ],
+    "created_at": "2026-09-28T18:26:42.637311+00:00",
+    "closed_at": "2026-09-28T18:26:42.651331+00:00",
+    "persisted_to_supabase": true
+  },
+  {
+    "ticket_id": "INC-103",
+    "service": "cart-microservice",
+    "title": "ConnectionPoolExhaustion in cart-microservice",
+    "root_cause": "Redis connection pool exhaustion in the cart-microservice triggered by a traffic surge, where the default pool size of 40 was insufficient to handle concurrent requests.",
+    "verified_fix": "Scaled the Redis connection pool size from 40 to 120 and increased the timeout duration to 60 seconds.",
+    "anti_pattern": "Do not deploy services with static, low-size connection pools (e.g., 40) that do not account for traffic surges; ensure pool sizing and timeouts are load-tested against peak expected concurrency.",
+    "failed_attempts": [],
+    "environment_metadata": {
+      "os": "Windows",
+      "os_release": "11",
+      "arch": "AMD64",
+      "python_version": "3.13.14"
+    },
+    "raw_logs_sample": [
+      "ERROR CartRedis pool size 40 exhausted under surge"
+    ],
+    "created_at": "2026-09-28T18:26:46.790577+00:00",
+    "closed_at": "2026-09-28T18:26:46.805966+00:00",
+    "persisted_to_supabase": true
+  }
+]

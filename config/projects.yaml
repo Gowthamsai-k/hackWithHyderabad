@@ -1,9 +1,20 @@
 projects:
-  - id: java-order-service
-    service: order-service
-    runtime: java-25
-    log_file: sample_service/order_service.log
-  - id: ecommerce-checkout
-    service: checkout-service
-    runtime: python-3.11
-    log_file: sample_service/checkout.log
+- id: java-order-service
+  service: order-service
+  runtime: java-25
+  log_file: sample_service/order_service.log
+- id: ecommerce-checkout
+  service: checkout-service
+  runtime: python-3.11
+  log_file: sample_service/checkout.log
+- id: hackWithHyderabad
+  service: incident-copilot
+  runtime: python-3.13
+  log_file: copilot.log
+- id: sample_service
+  service: sample_service
+  runtime: python-3.13
+  log_file: sample_service/checkout.log
+- id: react-project
+  service: react-project
+  log_file: frontedn-service.log

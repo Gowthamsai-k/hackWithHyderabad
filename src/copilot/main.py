@@ -153,8 +153,8 @@ def restore_tickets_from_supabase():
     """Restores past resolved incident reports from Supabase into the TICKETS map on server restart."""
     past_reports = get_past_reports(limit=100)
     for rep in past_reports:
-        tid = rep.get("ticket_id")
-        if not tid or tid in TICKETS:
+        tid = str(rep.get("ticket_id", ""))
+        if not tid or tid in TICKETS or "UNITTEST" in tid or "TEST" in tid:
             continue
         try:
             created_at = datetime.fromisoformat(rep.get("created_at")) if rep.get("created_at") else datetime.now(timezone.utc)
@@ -203,6 +203,37 @@ def get_dashboard():
         "service": "Autonomous Incident Copilot",
         "status": "operational",
         "tickets_count": len(TICKETS)
+    }
+
+@app.get("/help")
+@app.get("/api/v1/help")
+def get_command_help():
+    """Returns a comprehensive command reference for Incident Copilot CLI and API endpoints."""
+    return {
+        "title": "Autonomous Incident Copilot - Help & Command Reference",
+        "cli_commands": {
+            "add": "python3 copilot.py add <project-id> <log-path> | Register project in config/projects.yaml",
+            "list": "python3 copilot.py list | Display registered projects and log target readiness",
+            "watch": "python3 copilot.py watch | Launch multi-project background log watcher daemon",
+            "run": "python3 copilot.py run <cmd> | Execute app and intercept crashes automatically",
+            "run_observed": "python3 copilot.py run --file <target> -- <cmd> | Observe code diff mutations and silent fixes",
+            "memory_inspect": "python3 copilot.py memory inspect --service <name> [--dependency <name=ver>] | Inspect Hindsight memory",
+            "help": "python3 copilot.py /help | Display CLI & API command reference list"
+        },
+        "api_endpoints": {
+            "GET /": "Incident CRM Dashboard UI",
+            "GET /help": "API & CLI command reference",
+            "POST /api/v1/alerts/trigger": "Fast-Path ticket creation & read-only Hindsight recall",
+            "POST /api/v1/logs/ingest": "Passive ring-buffer log line ingestion",
+            "GET /api/v1/tickets": "List active and resolved incident tickets",
+            "GET /api/v1/tickets/{id}": "Fetch diagnostic payload for a specific ticket",
+            "POST /api/v1/tickets/{id}/comment": "Add triage note or observation to ticket thread",
+            "POST /api/v1/tickets/{id}/resolve": "Resolve ticket & queue async LLM post-mortem synthesis",
+            "GET /api/v1/tickets/{id}/context.md": "Stream zero-pollution markdown context for Claude Code / Cursor",
+            "GET /api/v1/hindsight/memories": "Inspect stored institutional memory bank",
+            "GET /api/v1/reports": "Fetch historical post-mortem reports stored in Supabase",
+            "POST /api/v1/demo/reset": "Reset demo environment and clear memory bank"
+        }
     }
 
 def get_next_ticket_id() -> str:
@@ -267,8 +298,24 @@ def trigger_alert(payload: AlertTriggerPayload):
 
     if not remediation_patch or not anti_pattern:
         gen_patch, gen_anti, gen_rationale = synthesize_remediation_and_anti_pattern(
-            payload.service, payload.error_type, payload.raw_logs
+            payload.service, payload.error_type, payload.raw_logs, recalled_runbook=recalled_runbook
         )
+
+        # Retrieve resolved tickets for this service, sorted by creation timestamp descending (newest first)
+        past_resolved_tickets = [
+            t for t in TICKETS.values()
+            if t.service == payload.service and t.status == "RESOLVED"
+        ]
+        if past_resolved_tickets:
+            past_resolved_tickets.sort(key=lambda t: t.created_at, reverse=True)
+            latest_resolved = past_resolved_tickets[0]
+            if latest_resolved.remediation_patch:
+                gen_patch = latest_resolved.remediation_patch
+            if latest_resolved.anti_pattern:
+                gen_anti = latest_resolved.anti_pattern
+            if latest_resolved.anti_pattern_rationale:
+                gen_rationale = latest_resolved.anti_pattern_rationale
+
         if not remediation_patch:
             remediation_patch = gen_patch
         if not anti_pattern:
