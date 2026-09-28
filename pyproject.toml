@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "incident-copilot"
+version = "1.0.0"
+description = "Autonomous Incident Copilot with Living Hindsight Memory"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "pydantic",
+    "requests",
+    "pyyaml",
+    "python-dotenv",
+    "groq",
+    "hindsight-client"
+]
+
+[project.scripts]
+copilot = "copilot.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
