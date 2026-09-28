@@ -1,6 +1,29 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
+
+class SystemEnvironmentMetadata(BaseModel):
+    service: str = Field(..., example="checkout-service")
+    environment: str = Field(default="production", example="production")
+    git_commit: Optional[str] = Field(default=None, example="a9f2c8d")
+    build_id: Optional[str] = Field(default=None, example="jenkins-402")
+    runtime: str = Field(default="python:3.11", example="python:3.11")
+    host_kernel: Optional[str] = None
+    dependencies: Dict[str, str] = Field(
+        default_factory=dict,
+        example={"redis": "7.2.4", "fastapi": "0.110.0"}
+    )
+    resource_limits: Dict[str, str] = Field(
+        default_factory=dict,
+        example={"cpu": "2000m", "memory": "4Gi"}
+    )
+
+class SilentFailureSnapshot(BaseModel):
+    file_path: str
+    error_type: str
+    error_trace: str
+    pre_fix_content: str
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class AlertTriggerPayload(BaseModel):
     service: str = Field(..., description="Service identifier, e.g. checkout-service")

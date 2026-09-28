@@ -171,11 +171,42 @@ def main():
         list_projects()
     elif cmd_lower == "watch":
         start_watcher()
+    elif cmd_lower == "memory":
+        # retrospect memory inspect --service checkout-service --dependency redis=7.2.4
+        if len(sys.argv) >= 3 and sys.argv[2] == "inspect":
+            from .hindsight_service import recall_memory
+            service = "checkout-service"
+            dependency = None
+            for idx, arg in enumerate(sys.argv[3:]):
+                if arg == "--service" and idx + 4 < len(sys.argv):
+                    service = sys.argv[idx + 4]
+                elif arg == "--dependency" and idx + 4 < len(sys.argv):
+                    dependency = sys.argv[idx + 4]
+            print(f"[*] Inspecting Hindsight memory for service '{service}' (dependency={dependency})...")
+            recalled = recall_memory(service=service, error_type="crash", dependency=dependency)
+            print("\n🧠 Recalled Runbooks:")
+            print(recalled or "[-] No memories found matching criteria.")
+        else:
+            print("Usage: retrospect memory inspect --service <name> [--dependency <name=version>]")
     elif cmd_lower == "run":
-        if len(sys.argv) < 3:
-            print("Error: Missing command to run. Example: /hr run python3 main.py")
-            sys.exit(1)
-        run_project(sys.argv[2:])
+        # Support both standard `retrospect run <cmd>` AND `retrospect run --file <target> -- <cmd>`
+        if "--file" in sys.argv:
+            from .diff_observer import run_observed_command
+            file_idx = sys.argv.index("--file")
+            target_file = sys.argv[file_idx + 1]
+            if "--" in sys.argv:
+                cmd_start = sys.argv.index("--") + 1
+                cmd_to_run = sys.argv[cmd_start:]
+            else:
+                cmd_to_run = sys.argv[file_idx + 2:]
+            print(f"👁️ [Diff Observer Active] Observing '{target_file}' with command: {' '.join(cmd_to_run)}")
+            code = run_observed_command(cmd_to_run, target_file)
+            sys.exit(code)
+        else:
+            if len(sys.argv) < 3:
+                print("Error: Missing command to run. Example: retrospect run python3 main.py")
+                sys.exit(1)
+            run_project(sys.argv[2:])
     else:
         target = sys.argv[1:]
         if len(target) == 1:

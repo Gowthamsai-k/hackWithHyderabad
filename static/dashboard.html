@@ -35,6 +35,25 @@
       background: #cbd5e1;
       border-radius: 9999px;
     }
+    .glass-bubble {
+      background: rgba(255, 255, 255, 0.72);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(226, 232, 240, 0.85);
+      box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.07), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
+    }
+    .glass-bubble-tab-active {
+      background: #0f172a;
+      color: #ffffff;
+      box-shadow: 0 2px 8px -1px rgba(15, 23, 42, 0.25);
+    }
+    .glass-bubble-tab-inactive {
+      color: #64748b;
+    }
+    .glass-bubble-tab-inactive:hover {
+      color: #0f172a;
+      background: rgba(241, 245, 249, 0.8);
+    }
     /* Markdown Prose Renderer Styles */
     .prose-content h1 {
       font-size: 1.15rem;
@@ -197,115 +216,203 @@
         </div>
       </div>
 
-      <!-- Row 2: Title & Description -->
-      <div class="mt-4 mb-3">
-        <h2 id="modal-title" class="text-xl font-bold text-slate-900 tracking-tight">
-          Redis Pool Starvation in checkout-service Pods
-        </h2>
-        <p id="modal-description" class="text-xs text-slate-500 leading-relaxed mt-1">
-          Connections exhausted during flash checkout load spike; transactions failing with timeout cascade to upstream payment router.
-        </p>
+      <!-- Row 2: Title, Description & Glassmorphism Nav Bubble -->
+      <div class="mt-4 mb-3 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 id="modal-title" class="text-xl font-bold text-slate-900 tracking-tight">
+            Redis Pool Starvation in checkout-service Pods
+          </h2>
+          <p id="modal-description" class="text-xs text-slate-500 leading-relaxed mt-0.5">
+            Connections exhausted during flash checkout load spike; transactions failing with timeout cascade to upstream payment router.
+          </p>
+        </div>
+
+        <!-- Glassmorphism Floating Bubble Navigation -->
+        <nav class="glass-bubble p-1 rounded-full flex items-center gap-1 shadow-sm shrink-0">
+          <button id="tab-btn-diagnostics" onclick="switchModalTab('diagnostics')" class="glass-bubble-tab-active px-3.5 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all duration-200 cursor-pointer">
+            <i class="fa-solid fa-microchip text-[11px]"></i> Diagnostics
+          </button>
+          <button id="tab-btn-thread" onclick="switchModalTab('thread')" class="glass-bubble-tab-inactive px-3.5 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all duration-200 cursor-pointer">
+            <i class="fa-regular fa-comments text-[11px]"></i> War Room
+            <span id="modal-thread-count-badge" class="bg-indigo-100 text-indigo-700 text-[10px] font-mono px-1.5 py-0.2 rounded-full">0</span>
+          </button>
+          <button id="tab-btn-postmortem" onclick="switchModalTab('postmortem')" class="glass-bubble-tab-inactive px-3.5 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all duration-200 cursor-pointer">
+            <i class="fa-solid fa-file-shield text-[11px]"></i> Post-Mortem & DB
+          </button>
+        </nav>
       </div>
 
-      <!-- Row 3: Metrics Banner (3 Columns) -->
-      <div class="bg-slate-50/70 border border-slate-100 rounded-xl p-3.5 my-3 grid grid-cols-3 gap-4">
-        <div>
-          <div class="text-[10px] text-slate-400 font-mono font-medium uppercase tracking-wider">DEGRADED PODS</div>
-          <div id="modal-degraded-pods" class="text-sm font-bold text-slate-800 font-mono mt-0.5">4 / 12 pods</div>
+      <!-- ========================================================================= -->
+      <!-- TAB 1: DIAGNOSTICS & RUNBOOK (DEFAULT)                                   -->
+      <!-- ========================================================================= -->
+      <div id="modal-tab-diagnostics" class="space-y-3">
+        <!-- Metrics Banner (3 Columns) -->
+        <div class="bg-slate-50/70 border border-slate-100 rounded-xl p-3.5 grid grid-cols-3 gap-4">
+          <div>
+            <div class="text-[10px] text-slate-400 font-mono font-medium uppercase tracking-wider">DEGRADED PODS</div>
+            <div id="modal-degraded-pods" class="text-sm font-bold text-slate-800 font-mono mt-0.5">4 / 12 pods</div>
+          </div>
+          <div>
+            <div class="text-[10px] text-slate-400 font-mono font-medium uppercase tracking-wider">ERROR SPIKE</div>
+            <div id="modal-error-spike" class="text-sm font-bold text-rose-500 font-mono mt-0.5">+840% p99</div>
+          </div>
+          <div>
+            <div class="text-[10px] text-slate-400 font-mono font-medium uppercase tracking-wider">DETECTION SOURCE</div>
+            <div id="modal-detection-source" class="text-sm font-bold text-slate-800 font-mono mt-0.5">TEMPR v2</div>
+          </div>
         </div>
-        <div>
-          <div class="text-[10px] text-slate-400 font-mono font-medium uppercase tracking-wider">ERROR SPIKE</div>
-          <div id="modal-error-spike" class="text-sm font-bold text-rose-500 font-mono mt-0.5">+840% p99</div>
-        </div>
-        <div>
-          <div class="text-[10px] text-slate-400 font-mono font-medium uppercase tracking-wider">DETECTION SOURCE</div>
-          <div id="modal-detection-source" class="text-sm font-bold text-slate-800 font-mono mt-0.5">TEMPR v2</div>
-        </div>
-      </div>
 
-      <!-- Row 4: Identified Blast Radius -->
-      <div class="flex flex-wrap items-center gap-2 mb-4">
-        <span class="text-[10px] text-slate-400 font-mono font-medium uppercase tracking-wider mr-1">IDENTIFIED BLAST RADIUS:</span>
-        <div id="modal-blast-radius" class="flex flex-wrap items-center gap-2">
-          <!-- Pills populated dynamically -->
-          <span class="bg-slate-100/90 text-slate-700 font-mono text-xs px-2.5 py-1 rounded border border-slate-200 flex items-center gap-1.5">
-            <span class="w-2 h-2 rounded-full bg-rose-500"></span> payment-gateway:9042
-          </span>
-          <span class="bg-slate-100/90 text-slate-700 font-mono text-xs px-2.5 py-1 rounded border border-slate-200 flex items-center gap-1.5">
-            <span class="w-2 h-2 rounded-full bg-rose-500"></span> cart-cache-redis.internal
-          </span>
-          <span class="bg-slate-100/90 text-slate-700 font-mono text-xs px-2.5 py-1 rounded border border-slate-200 flex items-center gap-1.5">
-            <span class="w-2 h-2 rounded-full bg-slate-400"></span> notification-worker-pool
-          </span>
+        <!-- Identified Blast Radius -->
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-[10px] text-slate-400 font-mono font-medium uppercase tracking-wider mr-1">IDENTIFIED BLAST RADIUS:</span>
+          <div id="modal-blast-radius" class="flex flex-wrap items-center gap-2">
+            <!-- Pills populated dynamically -->
+          </div>
         </div>
-      </div>
 
-      <!-- Row 5: Split Cards (Root Stack Trace vs Remediation Patch) -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 my-2">
-        
-        <!-- Left Box: Root Stack Trace -->
-        <div class="flex flex-col rounded-xl overflow-hidden border border-slate-200 shadow-2xs">
-          <div class="bg-slate-100/80 px-3.5 py-2 border-b border-slate-200 text-xs font-semibold text-slate-700 flex items-center justify-between">
-            <span class="flex items-center gap-1.5">
-              <i class="fa-solid fa-bug text-rose-500 text-xs"></i> Root Stack Trace
+        <!-- Split Cards (Root Stack Trace vs Remediation Patch) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 my-2">
+          <!-- Left Box: Root Stack Trace -->
+          <div class="flex flex-col rounded-xl overflow-hidden border border-slate-200 shadow-2xs">
+            <div class="bg-slate-100/80 px-3.5 py-2 border-b border-slate-200 text-xs font-semibold text-slate-700 flex items-center justify-between">
+              <span class="flex items-center gap-1.5">
+                <i class="fa-solid fa-bug text-rose-500 text-xs"></i> Root Stack Trace
+              </span>
+              <button onclick="copyTextFromElement('modal-stack-trace')" class="text-slate-500 hover:text-slate-800 text-[11px] font-mono flex items-center gap-1">
+                <i class="fa-regular fa-copy"></i> Copy
+              </button>
+            </div>
+            <pre id="modal-stack-trace" class="bg-slate-950 text-slate-200 p-3.5 font-mono text-xs leading-relaxed overflow-x-auto min-h-[140px] max-h-48 scrollbar-thin select-all"></pre>
+          </div>
+
+          <!-- Right Box: Remediation Patch -->
+          <div class="flex flex-col rounded-xl overflow-hidden border border-slate-200 shadow-2xs">
+            <div class="bg-slate-100/80 px-3.5 py-2 border-b border-slate-200 text-xs font-semibold text-slate-700 flex items-center justify-between">
+              <span class="flex items-center gap-1.5">
+                <i class="fa-solid fa-code-commit text-indigo-600 text-xs"></i> Remediation Patch
+              </span>
+              <button onclick="copyTextFromElement('modal-remediation-patch')" class="text-slate-500 hover:text-slate-800 text-[11px] font-mono flex items-center gap-1">
+                <i class="fa-regular fa-copy"></i> Copy
+              </button>
+            </div>
+            <pre id="modal-remediation-patch" class="bg-slate-950 text-slate-200 p-3.5 font-mono text-xs leading-relaxed overflow-x-auto min-h-[140px] max-h-48 scrollbar-thin select-all"></pre>
+          </div>
+        </div>
+
+        <!-- What NOT To Do (Learned from Past Traces) -->
+        <div id="modal-antipattern-container" class="mt-3.5 p-3.5 rounded-xl bg-amber-50/70 border border-amber-200/90 text-xs">
+          <div class="flex items-center justify-between mb-1.5">
+            <div class="font-bold text-amber-900 flex items-center gap-1.5 uppercase font-mono text-[11px]">
+              <i class="fa-solid fa-triangle-exclamation text-amber-600"></i> WHAT NOT TO DO (NEGATIVE KNOWLEDGE)
+            </div>
+            <span class="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1">
+              <i class="fa-solid fa-brain text-[10px]"></i> Anti-Pattern Guard
             </span>
-            <button onclick="copyTextFromElement('modal-stack-trace')" class="text-slate-500 hover:text-slate-800 text-[11px] font-mono flex items-center gap-1">
-              <i class="fa-regular fa-copy"></i> Copy
+          </div>
+          <div class="text-slate-800 font-bold text-xs flex items-start gap-2 mt-1">
+            <i class="fa-solid fa-ban text-rose-500 mt-0.5 shrink-0"></i>
+            <span id="modal-antipattern-action"></span>
+          </div>
+          <div class="text-[11px] text-slate-600 leading-relaxed mt-1.5 pl-5" id="modal-antipattern-rationale"></div>
+        </div>
+
+        <!-- Hindsight Memory Card (Runbook & Anti-Pattern) -->
+        <div id="modal-hindsight-container" class="mt-3 p-3.5 rounded-xl bg-indigo-50/50 border border-indigo-100 text-xs text-slate-700">
+          <div class="font-bold text-indigo-900 flex items-center gap-1.5 uppercase font-mono text-[11px] mb-1">
+            <i class="fa-solid fa-brain text-indigo-600"></i> Hindsight Institutional Runbook Memory
+          </div>
+          <div id="modal-hindsight-runbook" class="text-slate-600 leading-relaxed font-sans"></div>
+        </div>
+      </div>
+
+      <!-- ========================================================================= -->
+      <!-- TAB 2: CONVERSATIONAL WAR ROOM & TRIAGE THREAD                            -->
+      <!-- ========================================================================= -->
+      <div id="modal-tab-thread" class="hidden flex flex-col space-y-3">
+        <!-- War Room Live Feed Header -->
+        <div class="bg-indigo-50/60 border border-indigo-100 rounded-xl p-3 flex items-center justify-between text-xs">
+          <div class="flex items-center gap-2 text-indigo-900">
+            <i class="fa-solid fa-satellite-dish text-indigo-600 animate-pulse"></i>
+            <span class="font-semibold">Interactive SRE War Room</span>
+            <span class="text-slate-500 text-[11px]">· Document dead-ends, failed restarts, or fixes. These feed the negative knowledge learner!</span>
+          </div>
+          <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-white text-indigo-700 border border-indigo-200">
+            Auto-Indexed into Supabase
+          </span>
+        </div>
+
+        <!-- Conversation Scroll Container -->
+        <div id="modal-comments-timeline" class="space-y-2.5 max-h-[360px] overflow-y-auto p-2 scrollbar-thin bg-slate-50/50 rounded-xl border border-slate-100">
+          <!-- Comments populated dynamically -->
+        </div>
+
+        <!-- Comment Input Composer Box -->
+        <div class="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs space-y-2">
+          <div class="flex items-center gap-2">
+            <input type="text" id="comment-author-input" placeholder="Your Name / Role (e.g. Alex SRE)" value="On-Call SRE" class="text-xs border border-slate-200 rounded-lg px-2.5 py-1.5 w-44 font-medium text-slate-800 focus:outline-none focus:border-indigo-500">
+            <div class="flex items-center gap-1 text-[11px] text-slate-500 ml-auto">
+              <span class="text-slate-400">Quick template:</span>
+              <button onclick="insertCommentTemplate('failed')" class="px-2 py-0.5 rounded bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 transition cursor-pointer">
+                🔴 Failed Attempt
+              </button>
+              <button onclick="insertCommentTemplate('fix')" class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-200 transition cursor-pointer">
+                ✅ Verified Fix
+              </button>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <textarea id="comment-text-input" rows="2" placeholder="Record diagnostic step, attempted restart, helm patch, or observation..." class="flex-1 text-xs border border-slate-200 rounded-lg p-2.5 resize-none focus:outline-none focus:border-indigo-500 text-slate-800 font-sans"></textarea>
+            <button onclick="submitModalComment()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-4 py-3 rounded-lg text-xs flex flex-col items-center justify-center gap-1 shadow-xs transition active:scale-95 cursor-pointer h-full">
+              <i class="fa-regular fa-paper-plane text-xs"></i>
+              <span>Post</span>
             </button>
           </div>
-          <pre id="modal-stack-trace" class="bg-slate-950 text-slate-200 p-3.5 font-mono text-xs leading-relaxed overflow-x-auto min-h-[140px] max-h-48 scrollbar-thin select-all">Redis::ConnectionPool::TimeoutError: Waited 2.000 sec, 0 pool tokens available
-  at checkout/db/redis.go:142 in AcquireClientWithRetry()
-  at checkout/handlers/cart.go:88 in CommitCartReservation()</pre>
         </div>
+      </div>
 
-        <!-- Right Box: Remediation Patch -->
-        <div class="flex flex-col rounded-xl overflow-hidden border border-slate-200 shadow-2xs">
-          <div class="bg-slate-100/80 px-3.5 py-2 border-b border-slate-200 text-xs font-semibold text-slate-700 flex items-center justify-between">
-            <span class="flex items-center gap-1.5">
-              <i class="fa-solid fa-code-commit text-indigo-600 text-xs"></i> Remediation Patch (PR #1042)
+      <!-- ========================================================================= -->
+      <!-- TAB 3: POST-MORTEM SYNTHESIS & SUPABASE DATABASE SYNC                     -->
+      <!-- ========================================================================= -->
+      <div id="modal-tab-postmortem" class="hidden space-y-3">
+        <div class="bg-slate-50/80 border border-slate-200 rounded-xl p-4 space-y-3">
+          <div class="flex items-center justify-between border-b border-slate-200 pb-2.5">
+            <div class="flex items-center gap-2">
+              <div class="w-7 h-7 rounded-md bg-emerald-500 flex items-center justify-center text-white text-xs font-bold shadow-2xs">
+                <i class="fa-solid fa-database"></i>
+              </div>
+              <div>
+                <h4 class="text-xs font-bold text-slate-900">Supabase Persistent Knowledge Record</h4>
+                <p class="text-[10px] text-slate-500">Stored in <code class="bg-slate-200 text-slate-800 px-1 py-0.2 rounded font-mono">public.incident_reports</code> table</p>
+              </div>
+            </div>
+            <span id="modal-pm-status-badge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200 font-semibold">
+              PERSISTED IN SUPABASE
             </span>
-            <button onclick="copyTextFromElement('modal-remediation-patch')" class="text-slate-500 hover:text-slate-800 text-[11px] font-mono flex items-center gap-1">
-              <i class="fa-regular fa-copy"></i> Copy
-            </button>
           </div>
-          <pre id="modal-remediation-patch" class="bg-slate-950 text-slate-200 p-3.5 font-mono text-xs leading-relaxed overflow-x-auto min-h-[140px] max-h-48 scrollbar-thin select-all"># checkout-service/k8s/deployment.yaml
-<span class="text-rose-400">- REDIS_POOL_MAX_ACTIVE: 20</span>
-<span class="text-emerald-400">+ REDIS_POOL_MAX_ACTIVE: 80</span>
-<span class="text-emerald-400">+ REDIS_POOL_IDLE_TIMEOUT: 45s</span></pre>
-        </div>
 
-      </div>
-
-      <!-- Row 6: What NOT To Do (Learned from Past Traces) -->
-      <div id="modal-antipattern-container" class="mt-3.5 p-3.5 rounded-xl bg-amber-50/70 border border-amber-200/90 text-xs">
-        <div class="flex items-center justify-between mb-1.5">
-          <div class="font-bold text-amber-900 flex items-center gap-1.5 uppercase font-mono text-[11px]">
-            <i class="fa-solid fa-triangle-exclamation text-amber-600"></i> WHAT NOT TO DO (LEARNED FROM PAST TRACES)
+          <div class="space-y-2 text-xs">
+            <div>
+              <span class="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">SYNTHESIZED ROOT CAUSE:</span>
+              <p id="modal-pm-root-cause" class="text-slate-800 font-medium mt-0.5 leading-relaxed bg-white p-2.5 rounded-lg border border-slate-200"></p>
+            </div>
+            <div>
+              <span class="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">VERIFIED REMEDIATION ACTION:</span>
+              <p id="modal-pm-fix" class="text-emerald-700 font-medium mt-0.5 leading-relaxed bg-emerald-50/70 p-2.5 rounded-lg border border-emerald-200"></p>
+            </div>
+            <div>
+              <span class="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">FAILED ATTEMPTS EXTRACTED FROM TRIAGE:</span>
+              <ul id="modal-pm-failed-attempts" class="list-disc list-inside text-rose-700 font-medium mt-0.5 bg-rose-50/60 p-2.5 rounded-lg border border-rose-200 space-y-0.5"></ul>
+            </div>
+            <div>
+              <span class="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">LEARNED ANTI-PATTERN WARNING (HINDSIGHT):</span>
+              <p id="modal-pm-antipattern" class="text-amber-800 font-medium mt-0.5 leading-relaxed bg-amber-50/70 p-2.5 rounded-lg border border-amber-200"></p>
+            </div>
           </div>
-          <span class="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1">
-            <i class="fa-solid fa-brain text-[10px]"></i> Negative Knowledge Retained
-          </span>
-        </div>
-        <div class="text-slate-800 font-bold text-xs flex items-start gap-2 mt-1">
-          <i class="fa-solid fa-ban text-rose-500 mt-0.5 shrink-0"></i>
-          <span id="modal-antipattern-action">DO NOT perform rolling pod restarts (e.g. kubectl rollout restart deployment/checkout-service).</span>
-        </div>
-        <div class="text-[11px] text-slate-600 leading-relaxed mt-1.5 pl-5" id="modal-antipattern-rationale">
-          <strong>Why it failed in past traces:</strong> In past incident INC-101, rolling restarts under active ingress re-triggered immediate socket starvation, dropped 42 in-flight cart reservations, and amplified p99 latency spikes by +35%.
         </div>
       </div>
 
-      <!-- Row 7: Hindsight Memory Card (Runbook & Anti-Pattern) -->
-      <div id="modal-hindsight-container" class="mt-3 p-3.5 rounded-xl bg-indigo-50/50 border border-indigo-100 text-xs text-slate-700">
-        <div class="font-bold text-indigo-900 flex items-center gap-1.5 uppercase font-mono text-[11px] mb-1">
-          <i class="fa-solid fa-brain text-indigo-600"></i> Hindsight Institutional Runbook Memory
-        </div>
-        <div id="modal-hindsight-runbook" class="text-slate-600 leading-relaxed font-sans">
-          Past fix on checkout-service: Patched Helm values to scale max_connections from 20 to 80. Anti-pattern warning: Do not perform rolling restarts; they re-trigger connection pool exhaustion.
-        </div>
-      </div>
-
-      <!-- Row 7: Bottom Action Footer -->
+      <!-- Bottom Action Footer -->
       <div class="border-t border-slate-200 pt-4 mt-5 flex items-center justify-between">
         <div>
           <button id="modal-btn-resolve" onclick="resolveCurrentModalTicket()" class="bg-slate-950 hover:bg-slate-800 text-white font-medium px-4 py-2 rounded-lg text-xs flex items-center gap-2 shadow-xs transition active:scale-95 cursor-pointer">
@@ -497,6 +604,7 @@
 
       activeModalTicket = ticket;
       populateModal(ticket);
+      switchModalTab('diagnostics');
       document.getElementById('incident-modal').classList.remove('hidden');
     }
 
@@ -568,6 +676,68 @@
         antiContainer.classList.remove('hidden');
       }
 
+      // Comments / Triage Thread Population
+      const threadContainer = document.getElementById('modal-comments-timeline');
+      const comments = t.comments || [];
+      document.getElementById('modal-thread-count-badge').textContent = comments.length;
+
+      if (comments.length === 0) {
+        threadContainer.innerHTML = `
+          <div class="py-8 text-center text-slate-400 text-xs">
+            <i class="fa-regular fa-comment-dots text-slate-300 text-2xl mb-1.5 block"></i>
+            No comments in triage thread yet. Document initial observations or troubleshooting steps below.
+          </div>
+        `;
+      } else {
+        threadContainer.innerHTML = comments.map(c => {
+          const isFailed = (c.text || '').toLowerCase().includes('fail') || (c.text || '').toLowerCase().includes('crashing') || (c.text || '').toLowerCase().includes('re-triggered');
+          const isFix = (c.text || '').toLowerCase().includes('patch') || (c.text || '').toLowerCase().includes('scale') || (c.text || '').toLowerCase().includes('resolved') || (c.text || '').toLowerCase().includes('succeed');
+          
+          let tagBadge = '';
+          if (isFailed) {
+            tagBadge = `<span class="text-[9px] font-mono font-semibold px-1.5 py-0.2 rounded bg-rose-100 text-rose-700 border border-rose-200 ml-1.5">DEAD END</span>`;
+          } else if (isFix) {
+            tagBadge = `<span class="text-[9px] font-mono font-semibold px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-700 border border-emerald-200 ml-1.5">VERIFIED FIX</span>`;
+          }
+
+          return `
+            <div class="bg-white p-2.5 rounded-lg border border-slate-200 shadow-2xs space-y-1">
+              <div class="flex items-center justify-between text-[11px]">
+                <div class="font-bold text-slate-800 flex items-center gap-1">
+                  <i class="fa-regular fa-user text-slate-400 text-[10px]"></i>
+                  <span>${escapeHtml(c.author || 'Engineer')}</span>
+                  ${tagBadge}
+                </div>
+                <span class="text-slate-400 font-mono text-[10px]">${c.timestamp ? c.timestamp.split('T')[1].substring(0, 8) : ''}</span>
+              </div>
+              <p class="text-xs text-slate-700 leading-relaxed font-sans">${escapeHtml(c.text || '')}</p>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // Tab 3: Post-Mortem and Supabase Sync card
+      const pm = t.final_post_mortem;
+      if (pm) {
+        document.getElementById('modal-pm-root-cause').textContent = pm.root_cause || 'No technical root cause recorded.';
+        document.getElementById('modal-pm-fix').textContent = pm.verified_fix || 'No fix recorded.';
+        document.getElementById('modal-pm-antipattern').textContent = pm.anti_pattern_warning || 'None';
+        
+        const failedList = document.getElementById('modal-pm-failed-attempts');
+        if (pm.failed_attempts && pm.failed_attempts.length > 0) {
+          failedList.innerHTML = pm.failed_attempts.map(f => `<li>${escapeHtml(f)}</li>`).join('');
+        } else {
+          failedList.innerHTML = `<li class="text-slate-500">None</li>`;
+        }
+        document.getElementById('modal-pm-status-badge').textContent = t.status === 'RESOLVED' ? 'PERSISTED IN SUPABASE' : 'PENDING RESOLUTION';
+      } else {
+        document.getElementById('modal-pm-root-cause').textContent = 'Pending incident resolution. Close ticket to trigger LLM post-mortem synthesis.';
+        document.getElementById('modal-pm-fix').textContent = 'Pending verified fix step.';
+        document.getElementById('modal-pm-antipattern').textContent = 'Pending synthesis of dead ends.';
+        document.getElementById('modal-pm-failed-attempts').innerHTML = `<li class="text-slate-400">None extracted yet.</li>`;
+        document.getElementById('modal-pm-status-badge').textContent = 'AWAITING RESOLUTION';
+      }
+
       // Resolve button state
       const resolveBtn = document.getElementById('modal-btn-resolve');
       if (t.status === 'RESOLVED') {
@@ -576,6 +746,58 @@
       } else {
         resolveBtn.innerHTML = `<i class="fa-solid fa-check text-emerald-400"></i> Resolve Incident`;
         resolveBtn.className = "bg-slate-950 hover:bg-slate-800 text-white font-medium px-4 py-2 rounded-lg text-xs flex items-center gap-2 shadow-xs transition active:scale-95 cursor-pointer";
+      }
+    }
+
+    // Modal Glassmorphism Bubble Tab Switcher
+    function switchModalTab(tabName) {
+      const tabs = ['diagnostics', 'thread', 'postmortem'];
+      tabs.forEach(t => {
+        const btn = document.getElementById(`tab-btn-${t}`);
+        const view = document.getElementById(`modal-tab-${t}`);
+        if (t === tabName) {
+          view.classList.remove('hidden');
+          btn.className = "glass-bubble-tab-active px-3.5 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all duration-200 cursor-pointer";
+        } else {
+          view.classList.add('hidden');
+          btn.className = "glass-bubble-tab-inactive px-3.5 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all duration-200 cursor-pointer";
+        }
+      });
+    }
+
+    function insertCommentTemplate(type) {
+      const textarea = document.getElementById('comment-text-input');
+      if (type === 'failed') {
+        textarea.value = "Attempted rolling restart on service pods. Pods restarted, but errors re-triggered immediately under ingress load.";
+      } else if (type === 'fix') {
+        textarea.value = "Applied configuration patch to scale max_connections from 10 to 50. All ingress transactions now succeed.";
+      }
+      textarea.focus();
+    }
+
+    async function submitModalComment() {
+      if (!activeModalTicket) return;
+      const authorInput = document.getElementById('comment-author-input');
+      const textInput = document.getElementById('comment-text-input');
+      const author = authorInput.value.trim() || 'On-Call Engineer';
+      const text = textInput.value.trim();
+
+      if (!text) {
+        alert('Please enter a comment or observation.');
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/v1/tickets/${activeModalTicket.id}/comment`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ author, text })
+        });
+        if (!res.ok) throw new Error("Could not add comment");
+        textInput.value = '';
+        await fetchTickets();
+      } catch (err) {
+        alert('Failed to post comment: ' + err);
       }
     }
 

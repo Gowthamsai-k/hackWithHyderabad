@@ -1,10 +1,12 @@
 import os
 import sys
+import json
 import platform
 from datetime import datetime, timezone
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union
 from dotenv import load_dotenv
 from hindsight_client import Hindsight
+from .schemas import SystemEnvironmentMetadata
 
 load_dotenv()
 
@@ -48,15 +50,24 @@ def init_bank(bank_id: Optional[str] = None):
     except Exception as e:
         print(f"[*] Hindsight bank init notice for '{target_bank}': {e}")
 
-def recall_memory(service: str, error_type: str, bank_id: Optional[str] = None) -> Optional[str]:
+def recall_memory(
+    service: str, 
+    error_type: str, 
+    bank_id: Optional[str] = None,
+    dependency: Optional[str] = None
+) -> Optional[str]:
     """Queries Hindsight using multi-arm retrieval (Semantic + BM25 + Graph)."""
     target_bank = bank_id or get_env_var("BANK_ID", "incident-ops-bank")
     
+    query_str = f"Past fixes, root causes, architecture changes, and failed attempts for {service} encountering {error_type}"
+    if dependency:
+        query_str += f" with dependency {dependency}"
+
     # 1. Attempt live Hindsight recall
     try:
         memories = client.recall(
             bank_id=target_bank,
-            query=f"Past fixes, root causes, architecture changes, and failed attempts for {service} encountering {error_type}",
+            query=query_str,
             budget="high"
         )
         if memories and memories.results:
@@ -82,45 +93,65 @@ def retain_post_mortem(
     post_mortem, 
     closed_at: datetime,
     bank_id: Optional[str] = None,
-    extra_metadata: Optional[Dict[str, Any]] = None
+    extra_metadata: Optional[Dict[str, Any]] = None,
+    system_env: Optional[Union[SystemEnvironmentMetadata, Dict[str, Any]]] = None
 ):
-    """Retains structured incident resolutions, causal links, and rich environment metadata into Hindsight."""
+    """
+    Retains structured incident resolutions, causal links, and rich environment metadata into Hindsight.
+    Binds environment context (runtime, dependencies, git commit) per section 4 of Prompt.md.
+    """
     target_bank = bank_id or get_env_var("BANK_ID", "incident-ops-bank")
     
-    # Enrich content with environment metadata
-    sys_meta = get_system_metadata()
-    if extra_metadata:
-        sys_meta.update(extra_metadata)
+    if isinstance(system_env, SystemEnvironmentMetadata):
+        runtime_info = system_env.runtime
+        dep_summary = json.dumps(system_env.dependencies)
+        git_commit = system_env.git_commit or "HEAD"
+        deps_dict = system_env.dependencies
+    elif isinstance(system_env, dict):
+        runtime_info = system_env.get("runtime", system_env.get("python_version", "unknown"))
+        deps_dict = system_env.get("dependencies", {})
+        dep_summary = json.dumps(deps_dict) if isinstance(deps_dict, dict) else str(deps_dict)
+        git_commit = system_env.get("git_commit", "HEAD")
+    else:
+        sys_meta = get_system_metadata()
+        runtime_info = sys_meta.get("python_version", "unknown")
+        deps_dict = {}
+        dep_summary = "{}"
+        git_commit = "HEAD"
 
     content = (
-        f"Incident [{ticket_id}] on service '{service}'. "
-        f"System Env: OS={sys_meta.get('os')} ({sys_meta.get('architecture')}), Runtime={sys_meta.get('python_version')}. "
+        f"Incident [{ticket_id}] on '{service}'. "
+        f"Runtime: {runtime_info}. Dependencies: {dep_summary}. Git: {git_commit}. "
         f"Root Cause: {post_mortem.root_cause}. "
         f"Verified Fix: {post_mortem.verified_fix}. "
         f"Failed Attempts: {'; '.join(post_mortem.failed_attempts)}. "
         f"Anti-Pattern Warning: {post_mortem.anti_pattern_warning}"
     )
 
-    retained_live = False
-    meta_payload = {
+    metadata_payload = {
         "ticket_id": str(ticket_id),
         "service": str(service),
-        "type": "verified_post_mortem",
-        "system_os": str(sys_meta.get("os")),
-        "architecture": str(sys_meta.get("architecture")),
-        "runtime": str(sys_meta.get("python_version"))
+        "git_commit": str(git_commit),
+        "runtime": str(runtime_info),
+        "type": "verified_post_mortem"
     }
+
+    if deps_dict and isinstance(deps_dict, dict):
+        for k, v in deps_dict.items():
+            metadata_payload[f"dep_{k}"] = str(v)
+
     if extra_metadata:
         for k, v in extra_metadata.items():
-            meta_payload[k] = str(v)
+            metadata_payload[str(k)] = str(v)
 
+    retained_live = False
     try:
         client.retain(
             bank_id=target_bank,
             content=content,
             context=f"service:{service}:incidents",
             timestamp=closed_at,
-            metadata=meta_payload,
+            metadata=metadata_payload,
             retain_async=False
         )
         retained_live = True
@@ -134,7 +165,7 @@ def retain_post_mortem(
         "service": service,
         "content": content,
         "closed_at": closed_at,
-        "metadata": meta_payload,
+        "metadata": metadata_payload,
         "retained_live": retained_live
     })
     print(f"[*] Recorded post-mortem in knowledge store for ticket {ticket_id}")
