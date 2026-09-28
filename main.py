@@ -42,6 +42,8 @@ def seed_initial_tickets():
 - REDIS_POOL_MAX_ACTIVE: 20
 + REDIS_POOL_MAX_ACTIVE: 80
 + REDIS_POOL_IDLE_TIMEOUT: 45s""",
+        anti_pattern="DO NOT perform rolling pod restarts (e.g. kubectl rollout restart deployment/checkout-service).",
+        anti_pattern_rationale="In past trace INC-101, rolling restarts under active ingress re-triggered immediate socket starvation, dropped 42 in-flight cart reservations, and amplified p99 latency spikes by +35%.",
         comments=[
             {"author": "Jane (SRE)", "text": "Saw the alert. Initiating rolling restart on checkout-service pods.", "timestamp": now.isoformat()},
             {"author": "Bob (Infra)", "text": "Restart completed, but errors re-triggered immediately. Still crashing.", "timestamp": now.isoformat()}
@@ -75,6 +77,8 @@ def seed_initial_tickets():
 - UPSTREAM_TIMEOUT_MS: 5000
 + UPSTREAM_TIMEOUT_MS: 12000
 + CIRCUIT_BREAKER_TRIP_COUNT: 10""",
+        anti_pattern="DO NOT decrease downstream client request timeouts.",
+        anti_pattern_rationale="Shortening client timeouts triggered retry cascades that doubled incoming request load on the database.",
         comments=[{"author": "DevOps", "text": "Circuit breaker tripped. Investigating balance DB latency.", "timestamp": now.isoformat()}],
         hindsight_runbook="Past fix on payment-gateway: Raised upstream timeout from 5000ms to 12000ms and adjusted circuit breaker thresholds.",
         is_recurring=True
@@ -100,6 +104,8 @@ def seed_initial_tickets():
         remediation_patch="""# auth-service/env.yaml
 - JWKS_CACHE_TTL_SEC: 60
 + JWKS_CACHE_TTL_SEC: 3600""",
+        anti_pattern="DO NOT flush public key cache across all instances simultaneously.",
+        anti_pattern_rationale="Simultaneous cache flush causes stampedes against remote JWKS endpoints.",
         comments=[{"author": "SecOps", "text": "Patched JWKS cache TTL from 60s to 3600s. Cache hit ratio restored.", "timestamp": now.isoformat()}],
         hindsight_runbook="Verified Fix: Bumped JWKS_CACHE_TTL_SEC to 3600 to prevent cache stampedes.",
         is_recurring=False
@@ -183,6 +189,8 @@ def trigger_alert(payload: AlertTriggerPayload):
 - REDIS_POOL_MAX_ACTIVE: 20
 + REDIS_POOL_MAX_ACTIVE: 80
 + REDIS_POOL_IDLE_TIMEOUT: 45s"""
+    anti_pattern = payload.anti_pattern or "DO NOT perform rolling pod restarts (e.g. kubectl rollout restart deployment/checkout-service)."
+    anti_pattern_rationale = payload.anti_pattern_rationale or "In past trace INC-101, rolling restarts under active load re-triggered immediate connection pool starvation, dropped in-flight cart reservations, and amplified error spikes by +35%."
 
     ticket = Ticket(
         id=ticket_id,
@@ -199,6 +207,8 @@ def trigger_alert(payload: AlertTriggerPayload):
         detection_source=detection_source,
         blast_radius=blast_radius,
         remediation_patch=remediation_patch,
+        anti_pattern=anti_pattern,
+        anti_pattern_rationale=anti_pattern_rationale,
         comments=[],
         hindsight_runbook=recalled_runbook or "First occurrence: No prior runbook found in Hindsight.",
         is_recurring=is_recurring,

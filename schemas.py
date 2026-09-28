@@ -14,6 +14,8 @@ class AlertTriggerPayload(BaseModel):
     detection_source: Optional[str] = "TEMPR v2"
     blast_radius: Optional[List[str]] = None
     remediation_patch: Optional[str] = None
+    anti_pattern: Optional[str] = None
+    anti_pattern_rationale: Optional[str] = None
 
 class CommentPayload(BaseModel):
     author: str
@@ -40,6 +42,8 @@ class Ticket(BaseModel):
     detection_source: Optional[str] = "TEMPR v2"
     blast_radius: List[str] = Field(default_factory=list)
     remediation_patch: Optional[str] = None
+    anti_pattern: Optional[str] = None
+    anti_pattern_rationale: Optional[str] = None
     comments: List[Dict[str, Any]] = Field(default_factory=list)
     hindsight_runbook: Optional[str] = None
     final_post_mortem: Optional[PostMortemExtraction] = None

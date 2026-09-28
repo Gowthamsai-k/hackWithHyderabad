@@ -274,7 +274,26 @@
 
       </div>
 
-      <!-- Row 6: Hindsight Memory Card (Runbook & Anti-Pattern) -->
+      <!-- Row 6: What NOT To Do (Learned from Past Traces) -->
+      <div id="modal-antipattern-container" class="mt-3.5 p-3.5 rounded-xl bg-amber-50/70 border border-amber-200/90 text-xs">
+        <div class="flex items-center justify-between mb-1.5">
+          <div class="font-bold text-amber-900 flex items-center gap-1.5 uppercase font-mono text-[11px]">
+            <i class="fa-solid fa-triangle-exclamation text-amber-600"></i> WHAT NOT TO DO (LEARNED FROM PAST TRACES)
+          </div>
+          <span class="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1">
+            <i class="fa-solid fa-brain text-[10px]"></i> Negative Knowledge Retained
+          </span>
+        </div>
+        <div class="text-slate-800 font-bold text-xs flex items-start gap-2 mt-1">
+          <i class="fa-solid fa-ban text-rose-500 mt-0.5 shrink-0"></i>
+          <span id="modal-antipattern-action">DO NOT perform rolling pod restarts (e.g. kubectl rollout restart deployment/checkout-service).</span>
+        </div>
+        <div class="text-[11px] text-slate-600 leading-relaxed mt-1.5 pl-5" id="modal-antipattern-rationale">
+          <strong>Why it failed in past traces:</strong> In past incident INC-101, rolling restarts under active ingress re-triggered immediate socket starvation, dropped 42 in-flight cart reservations, and amplified p99 latency spikes by +35%.
+        </div>
+      </div>
+
+      <!-- Row 7: Hindsight Memory Card (Runbook & Anti-Pattern) -->
       <div id="modal-hindsight-container" class="mt-3 p-3.5 rounded-xl bg-indigo-50/50 border border-indigo-100 text-xs text-slate-700">
         <div class="font-bold text-indigo-900 flex items-center gap-1.5 uppercase font-mono text-[11px] mb-1">
           <i class="fa-solid fa-brain text-indigo-600"></i> Hindsight Institutional Runbook Memory
@@ -463,6 +482,26 @@
 
       // Hindsight Institutional Runbook
       document.getElementById('modal-hindsight-runbook').textContent = t.hindsight_runbook || 'First occurrence: Zero prior institutional memory in Hindsight bank. Cold-start triage active.';
+
+      // Dynamic Anti-Pattern (What NOT to do from past traces)
+      const antiAction = document.getElementById('modal-antipattern-action');
+      const antiRationale = document.getElementById('modal-antipattern-rationale');
+      const antiContainer = document.getElementById('modal-antipattern-container');
+
+      if (t.anti_pattern) {
+        antiAction.textContent = t.anti_pattern;
+        antiRationale.innerHTML = `<strong>Why it failed in past traces:</strong> ${t.anti_pattern_rationale || 'Failed to mitigate outage and caused service regressions in previous post-mortems.'}`;
+        antiContainer.classList.remove('hidden');
+      } else if (t.hindsight_runbook && t.hindsight_runbook.includes('Anti-pattern warning:')) {
+        const warning = t.hindsight_runbook.split('Anti-pattern warning:')[1].trim();
+        antiAction.textContent = warning;
+        antiRationale.innerHTML = `<strong>Why it failed in past traces:</strong> Re-triggered error loops and caused regressions in prior incidents.`;
+        antiContainer.classList.remove('hidden');
+      } else {
+        antiAction.textContent = "No anti-patterns recorded yet (Cold-start incident).";
+        antiRationale.innerHTML = `<strong>Notice:</strong> This is a novel error signature. When this incident is resolved, the Copilot will automatically analyze all attempted troubleshooting steps and record any dead ends as anti-pattern rules.`;
+        antiContainer.classList.remove('hidden');
+      }
 
       // Resolve button state
       const resolveBtn = document.getElementById('modal-btn-resolve');
