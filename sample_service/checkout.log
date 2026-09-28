@@ -1,77 +1,52 @@
-2026-09-28T13:17:03.791858+00:00 INFO checkout-service initialized on port 8050 (max_connections=10)
-2026-09-28T13:17:03 INFO Kubernetes pod checkout-service-7f8d9b-c4x9k ready for ingress
-2026-09-28T13:17:56 INFO Order initiated for user buyer-1, total=$49.99
-2026-09-28T13:17:56 INFO Order initiated for user buyer-0, total=$49.99
-2026-09-28T13:17:56 INFO Order initiated for user buyer-3, total=$49.99
-2026-09-28T13:17:56 INFO Order initiated for user buyer-2, total=$49.99
-2026-09-28T13:17:56 INFO Order initiated for user buyer-4, total=$49.99
-2026-09-28T13:17:56 INFO Order initiated for user buyer-5, total=$49.99
-2026-09-28T13:17:56 INFO Order initiated for user buyer-6, total=$49.99
-2026-09-28T13:17:56 INFO Order initiated for user buyer-7, total=$49.99
-2026-09-28T13:17:56 INFO Order initiated for user buyer-8, total=$49.99
-2026-09-28T13:17:56 INFO Order initiated for user buyer-9, total=$49.99
-2026-09-28T13:17:56 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:17:56 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:17:56 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:17:56 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:17:56 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:17:56 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:17:56 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:17:56 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:17:56 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:17:56 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:17:56 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:17:56 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:17:56 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:17:56 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:17:56 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:52:26 INFO Order initiated for user buyer-0, total=$49.99
-2026-09-28T13:52:26 INFO Order initiated for user buyer-1, total=$49.99
-2026-09-28T13:52:26 INFO Order initiated for user buyer-2, total=$49.99
-2026-09-28T13:52:26 INFO Order initiated for user buyer-3, total=$49.99
-2026-09-28T13:52:26 INFO Order initiated for user buyer-4, total=$49.99
-2026-09-28T13:52:26 INFO Order initiated for user buyer-5, total=$49.99
-2026-09-28T13:52:26 INFO Order initiated for user buyer-7, total=$49.99
-2026-09-28T13:52:26 INFO Order initiated for user buyer-8, total=$49.99
-2026-09-28T13:52:26 INFO Order initiated for user buyer-6, total=$49.99
-2026-09-28T13:52:26 INFO Order initiated for user buyer-9, total=$49.99
-2026-09-28T13:52:26 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:52:26 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:52:26 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:52:26 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:52:26 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:52:26 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:52:26 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:52:26 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:52:26 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:52:26 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:52:26 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:52:26 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:52:26 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:52:26 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:52:26 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:53:07 INFO Order initiated for user buyer-2, total=$49.99
-2026-09-28T13:53:07 INFO Order initiated for user buyer-0, total=$49.99
-2026-09-28T13:53:07 INFO Order initiated for user buyer-1, total=$49.99
-2026-09-28T13:53:07 INFO Order initiated for user buyer-3, total=$49.99
-2026-09-28T13:53:07 INFO Order initiated for user buyer-4, total=$49.99
-2026-09-28T13:53:07 INFO Order initiated for user buyer-5, total=$49.99
-2026-09-28T13:53:07 INFO Order initiated for user buyer-6, total=$49.99
-2026-09-28T13:53:08 INFO Order initiated for user buyer-7, total=$49.99
-2026-09-28T13:53:08 INFO Order initiated for user buyer-8, total=$49.99
-2026-09-28T13:53:08 INFO Order initiated for user buyer-9, total=$49.99
-2026-09-28T13:53:08 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:53:08 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:53:08 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:53:08 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:53:08 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:53:08 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:53:08 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:53:08 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:53:08 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:53:08 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:53:08 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:53:08 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:53:08 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:53:08 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
-2026-09-28T13:53:08 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
+2026-09-28T14:04:43.503264+00:00 INFO checkout-service initialized (max_connections=10)
+2026-09-28T14:04:43 INFO Kubernetes pod checkout-service-ready for ingress
+2026-09-28T14:05:20 INFO Order initiated for user buyer-1, total=$49.99
+2026-09-28T14:05:20 INFO Order initiated for user buyer-0, total=$49.99
+2026-09-28T14:05:20 INFO Order initiated for user buyer-3, total=$49.99
+2026-09-28T14:05:20 INFO Order initiated for user buyer-2, total=$49.99
+2026-09-28T14:05:20 INFO Order initiated for user buyer-5, total=$49.99
+2026-09-28T14:05:20 INFO Order initiated for user buyer-4, total=$49.99
+2026-09-28T14:05:20 INFO Order initiated for user buyer-6, total=$49.99
+2026-09-28T14:05:20 INFO Order initiated for user buyer-7, total=$49.99
+2026-09-28T14:05:20 INFO Order initiated for user buyer-8, total=$49.99
+2026-09-28T14:05:20 INFO Order initiated for user buyer-9, total=$49.99
+2026-09-28T14:05:20 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
+2026-09-28T14:05:20 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
+2026-09-28T14:05:20 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
+2026-09-28T14:05:20 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
+2026-09-28T14:05:20 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
+2026-09-28T14:05:20 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
+2026-09-28T14:05:20 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
+2026-09-28T14:05:20 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
+2026-09-28T14:05:20 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
+2026-09-28T14:05:20 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
+2026-09-28T14:05:20 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
+2026-09-28T14:05:20 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
+2026-09-28T14:05:20 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
+2026-09-28T14:05:20 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
+2026-09-28T14:05:20 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
+2026-09-28T14:13:27 INFO Order initiated for user buyer-3, total=$49.99
+2026-09-28T14:13:27 INFO Order initiated for user buyer-0, total=$49.99
+2026-09-28T14:13:27 INFO Order initiated for user buyer-1, total=$49.99
+2026-09-28T14:13:27 INFO Order initiated for user buyer-2, total=$49.99
+2026-09-28T14:13:27 INFO Order initiated for user buyer-5, total=$49.99
+2026-09-28T14:13:27 INFO Order initiated for user buyer-4, total=$49.99
+2026-09-28T14:13:27 INFO Order initiated for user buyer-6, total=$49.99
+2026-09-28T14:13:27 INFO Order initiated for user buyer-7, total=$49.99
+2026-09-28T14:13:27 INFO Order initiated for user buyer-8, total=$49.99
+2026-09-28T14:13:27 INFO Order initiated for user buyer-9, total=$49.99
+2026-09-28T14:13:27 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
+2026-09-28T14:13:27 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
+2026-09-28T14:13:27 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
+2026-09-28T14:13:27 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
+2026-09-28T14:13:27 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
+2026-09-28T14:13:27 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
+2026-09-28T14:13:27 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
+2026-09-28T14:13:27 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
+2026-09-28T14:13:27 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
+2026-09-28T14:13:27 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
+2026-09-28T14:13:27 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
+2026-09-28T14:13:28 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
+2026-09-28T14:13:28 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
+2026-09-28T14:13:28 ERROR ConnectionPool timeout: Max connections (10) exhausted under load
+2026-09-28T14:13:28 ERROR ConnectionPool timeout: Max connections (10) exhausted under load

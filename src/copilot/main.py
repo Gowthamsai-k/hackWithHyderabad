@@ -13,6 +13,7 @@ from .filters import filter_logs, filter_chat, apply_context_budget
 from .hindsight_service import init_bank, recall_memory, get_all_memories, reset_memory_bank
 from .synthesizer import run_idle_post_mortem, synthesize_remediation_and_anti_pattern
 from .watcher import BackgroundLogWatcher
+from .supabase_service import store_incident_report, get_past_reports
 
 load_dotenv()
 
@@ -148,10 +149,43 @@ def seed_initial_tickets():
     TICKETS[t104.id] = t104
     print(f"[*] Seeded {len(TICKETS)} production incident tickets into environment.")
 
+def restore_tickets_from_supabase():
+    """Restores past resolved incident reports from Supabase into the TICKETS map on server restart."""
+    past_reports = get_past_reports(limit=100)
+    for rep in past_reports:
+        tid = rep.get("ticket_id")
+        if not tid or tid in TICKETS:
+            continue
+        try:
+            created_at = datetime.fromisoformat(rep.get("created_at")) if rep.get("created_at") else datetime.now(timezone.utc)
+        except Exception:
+            created_at = datetime.now(timezone.utc)
+
+        t = Ticket(
+            id=tid,
+            service=rep.get("service", "unknown-service"),
+            severity="P1",
+            status="RESOLVED",
+            created_at=created_at,
+            raw_logs=rep.get("raw_logs_sample", []),
+            title=rep.get("title") or f"{rep.get('service')} incident",
+            description=rep.get("root_cause"),
+            remediation_patch=rep.get("verified_fix"),
+            anti_pattern=rep.get("anti_pattern"),
+            comments=[{"author": "System", "text": f"Resolved fix: {rep.get('verified_fix')}", "timestamp": rep.get('closed_at')}],
+            hindsight_runbook=f"Past fix on {rep.get('service')}: {rep.get('verified_fix')}. Anti-pattern: {rep.get('anti_pattern')}",
+            is_recurring=True,
+            environment_metadata=rep.get("environment_metadata", {})
+        )
+        TICKETS[tid] = t
+    if past_reports:
+        print(f"[*] Restored {len(TICKETS)} incident records from Supabase into active ticket memory.")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_bank()
     seed_initial_tickets()
+    restore_tickets_from_supabase()
     yield
 
 app = FastAPI(title="Autonomous Incident Copilot", lifespan=lifespan)
@@ -358,12 +392,34 @@ def _async_idle_worker(ticket_id: str, service: str, clean_logs: list, clean_cha
     )
 
     if ticket_id in TICKETS:
-        TICKETS[ticket_id].final_post_mortem = post_mortem
-        TICKETS[ticket_id].agent_trace.append({
+        ticket_obj = TICKETS[ticket_id]
+        ticket_obj.final_post_mortem = post_mortem
+        ticket_obj.agent_trace.append({
             "phase": "IDLE-PATH",
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "event": "Hindsight Memory Consolidated",
             "detail": f"Permanently stored verified fix and anti-pattern warning into Hindsight bank: {BANK_ID}"
+        })
+
+        # Persist full structured report into Supabase
+        report_res = store_incident_report(
+            ticket_id=ticket_obj.id,
+            service=ticket_obj.service,
+            title=ticket_obj.title or f"{ticket_obj.service} incident",
+            root_cause=post_mortem.root_cause,
+            verified_fix=post_mortem.verified_fix,
+            anti_pattern=post_mortem.anti_pattern_warning,
+            failed_attempts=post_mortem.failed_attempts,
+            environment_metadata=ticket_obj.environment_metadata,
+            raw_logs=ticket_obj.raw_logs,
+            created_at=ticket_obj.created_at,
+            closed_at=closed_at
+        )
+        ticket_obj.agent_trace.append({
+            "phase": "IDLE-PATH",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "event": "Supabase Report Saved",
+            "detail": f"Stored complete post-mortem report into Supabase (persisted={report_res.get('persisted_to_supabase', False)})."
         })
 
 @app.post("/api/v1/tickets/{ticket_id}/resolve")
@@ -449,6 +505,15 @@ def get_hindsight_memories():
     return {
         "bank_id": BANK_ID,
         "memories": get_all_memories()
+    }
+
+@app.get("/api/v1/reports")
+def list_past_reports(limit: int = 50, service: Optional[str] = None):
+    """Retrieves historical post-mortem incident reports stored in Supabase."""
+    reports = get_past_reports(limit=limit, service=service)
+    return {
+        "count": len(reports),
+        "reports": reports
     }
 
 @app.get("/api/v1/realtime/status")

@@ -1,50 +1,9 @@
 projects:
-- id: java-order-service
-  name: Order Processing Engine
-  service: order-service
-  runtime: java-25
-  log_file: sample_service/order_service.log
-  error_patterns:
-  - ArrayIndexOutOfBoundsException
-  - IndexOutOfBoundsException
-  - NullPointerException
-  - Exception in thread
-  hindsight_bank: order-ops-bank
-  default_title: ArrayIndexOutOfBoundsException in OrderBatchProcessor
-  default_description: Unchecked array index boundary accessed during order batch
-    iteration; thread terminated abruptly.
-  remediation_patch: '// OrderBatchProcessor.java
-
-    - for (int i = 0; i <= orders.length; i++) {
-
-    + for (int i = 0; i < orders.length; i++) {
-
-    '
-  anti_pattern: DO NOT suppress IndexOutOfBoundsException with empty try-catch blocks.
-  anti_pattern_rationale: Suppressing bounds exceptions masks batch truncation, causing
-    silent order drops and unfulfilled customer transactions.
-- id: ecommerce-checkout
-  name: Checkout Microservice
-  service: checkout-service
-  runtime: python-3.11
-  log_file: sample_service/checkout.log
-  error_patterns:
-  - ConnectionPool timeout
-  - Redis::ConnectionTimeout
-  hindsight_bank: incident-ops-bank
-  default_title: Redis Pool Starvation in checkout-service Pods
-  default_description: Connections exhausted during flash checkout load spike; transactions
-    failing with timeout cascade.
-  remediation_patch: '# checkout-service/k8s/deployment.yaml
-
-    - REDIS_POOL_MAX_ACTIVE: 20
-
-    + REDIS_POOL_MAX_ACTIVE: 80
-
-    + REDIS_POOL_IDLE_TIMEOUT: 45s
-
-    '
-  anti_pattern: DO NOT perform rolling pod restarts.
-  anti_pattern_rationale: Rolling restarts under active load re-trigger socket starvation
-    and drop in-flight cart reservations.
-
+  - id: java-order-service
+    service: order-service
+    runtime: java-25
+    log_file: sample_service/order_service.log
+  - id: ecommerce-checkout
+    service: checkout-service
+    runtime: python-3.11
+    log_file: sample_service/checkout.log
