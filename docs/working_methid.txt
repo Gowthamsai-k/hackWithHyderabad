@@ -1,54 +1,38 @@
 
-### Step-by-Step: Monitoring Any Fresh Project
+  ### 🎉 Installed Global copilot Command & Smart File Execution!
 
-  Whenever you create a fresh project directory (e.g., my_java_app), follow these 3 simple steps:
+  We added a package configuration (pyproject.toml) and created a dedicated CLI module (cli.py).
 
-  #### Step 1: Register Your Project
-
-  Run this one command from the repository root:
-
-    python3 copilot.py add my-java-app my_java_app/app.log
-
-  (Alternatively, you can manually paste these 2 lines into projects.yaml):
-
-      - id: my-java-app
-        log_file: my_java_app/app.log
-  │ The background daemon will automatically detect and start tailing my_java_app/app.log within 2 seconds.
+  Now you can use copilot as a native system command from any terminal or directory without typing python or script file paths!
   ──────
-  #### Step 2: Run Your Application
+  ### 1. Smart Direct File Execution
 
-  Run your Java or Python app and redirect its output to your configured log file:
+  Instead of typing long commands, you can now run files directly by name:
 
-  For Java (Main.java):
-
-    cd my_java_app
-    javac Main.java
-    java Main >> app.log 2>&1
-
-  For Python (main.py):
-    cd my_java_app
-    python3 main.py >> app.log 2>&1
-
-  (Or configure your logging framework like Log4j, SLF4J, or Python logging to write to app.log).
+    # Python: automatically compiles/runs python main.py and tracks crashes
+    copilot main.py
+    
+    # Java: automatically compiles & runs java OrderBatchProcessor
+    copilot OrderBatchProcessor.java
+    
+    # Node.js: automatically runs node app.js
+    copilot app.js
   ──────
-  #### Step 3: View Incident & Apply Remediation
+  ### 2. Management Commands
 
-  1. Open the dashboard at http://localhost:8000.
-  2. As soon as the error fires, the incident ticket pops up in the Command Queue.
-  3. Click the ticket to see:
-      • Root Cause & Stack Trace
-      • Synthesized Git Diff Remediation Patch
-      • ⚠️ What NOT to do (Learned from past traces)
-  4. Feed the incident context directly to Claude Code or Cursor:
-    curl -s http://localhost:8000/api/v1/tickets/INC-104/context.md | claude
+    # Register a fresh project log target
+    copilot add my-java-app E:/MyProjects/logs/app.log
 
+    # List all registered projects and log file readiness
+    copilot list
+
+    # Run the background watcher daemon
+    copilot watch
+
+    # Run any custom command
+    copilot run pytest
   ──────
-  ### Background Service Management
+  ### ⚙️ How It Was Installed
 
-   Command                                                                         | Purpose
-  ---------------------------------------------------------------------------------|--------------------------------------------------------------------------------
-   python3 copilot.py list                                                         | List all monitored projects and log file statuses
-   python3 copilot.py add <id> <log>                                               | Register a fresh project directory
-   python3 project_watcher.py                                                      | Run the watcher daemon in the foreground
-   ./start.sh                                                                      | Launch the entire copilot platform and watcher in the background
-   ./stop.sh                  
+  1. pyproject.toml Entrypoint: Registered [project.scripts] copilot = "copilot.cli:main".
+  2. Pip Install: Executed pip install -e . to link the copilot executable directly into system PATH.

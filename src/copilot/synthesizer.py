@@ -9,8 +9,14 @@ from .hindsight_service import retain_post_mortem
 
 load_dotenv()
 
-GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
-GROQ_MODEL = os.getenv("GROQ_MODEL", "qwen/qwen3-32b")
+def get_env_var(key: str, default: str = "") -> str:
+    val = os.getenv(key, default)
+    if val:
+        val = val.strip().strip("'\"")
+    return val
+
+GROQ_API_KEY = get_env_var("GROQ_API_KEY", "")
+GROQ_MODEL = get_env_var("GROQ_MODEL", "qwen/qwen3.8-27b")
 
 groq_client = None
 if GROQ_API_KEY and GROQ_API_KEY != "your_groq_api_key_here":
@@ -52,7 +58,15 @@ def _heuristic_post_mortem(service: str, filtered_logs: list, filtered_chat: lis
         anti_pattern_warning=anti_pattern
     )
 
-def run_idle_post_mortem(ticket_id: str, service: str, filtered_logs: list, filtered_chat: list, closed_at: datetime):
+def run_idle_post_mortem(
+    ticket_id: str, 
+    service: str, 
+    filtered_logs: list, 
+    filtered_chat: list, 
+    closed_at: datetime,
+    bank_id: str = None,
+    extra_metadata: dict = None
+):
     """Synthesizes root causes, failed steps, and fixes from the complete incident bundle."""
     prompt = f"""
 You are an expert SRE Post-Mortem Compiler. Analyze this resolved incident bundle for service '{service}'.
@@ -70,21 +84,22 @@ Extract the incident facts into valid JSON matching this exact structure:
   "verified_fix": "The specific action that resolved the outage",
   "anti_pattern_warning": "Warning future engineers what NOT to do based on failed attempts"
 }}
-Output raw JSON only. Do NOT include markdown code blocks.
+Output raw JSON only. Ensure the output is valid JSON format.
 """
 
     post_mortem = None
 
     if groq_client:
         try:
+            model_to_use = get_env_var("GROQ_MODEL", "qwen/qwen3.8-27b")
             response = groq_client.chat.completions.create(
-                model=GROQ_MODEL,
+                model=model_to_use,
                 messages=[{"role": "user", "content": prompt}],
                 response_format={"type": "json_object"}
             )
             parsed = clean_llm_json(response.choices[0].message.content)
             post_mortem = PostMortemExtraction(**parsed)
-            print(f"[*] Successfully synthesized post-mortem using Groq ({GROQ_MODEL}) for {ticket_id}")
+            print(f"[*] Successfully synthesized post-mortem using Groq ({model_to_use}) for {ticket_id}")
         except Exception as e:
             print(f"[!] Groq synthesis failed ({e}). Falling back to heuristic extractor.")
 
@@ -92,14 +107,14 @@ Output raw JSON only. Do NOT include markdown code blocks.
         post_mortem = _heuristic_post_mortem(service, filtered_logs, filtered_chat)
         print(f"[*] Generated post-mortem synthesis for {ticket_id} via fallback extractor.")
 
-    # Ingest permanently into Hindsight memory
-    retain_post_mortem(ticket_id, service, post_mortem, closed_at)
+    # Ingest permanently into Hindsight memory with metadata
+    retain_post_mortem(ticket_id, service, post_mortem, closed_at, bank_id=bank_id, extra_metadata=extra_metadata)
     return post_mortem
 
 def synthesize_remediation_and_anti_pattern(service: str, error_type: str, raw_logs: list) -> tuple[str, str, str]:
     """
     Synthesizes a tailored unified-diff remediation patch and anti-pattern warning
-    for incoming crash alerts. Uses Groq LLM if configured; otherwise applies
+    for incoming crash alerts. Uses Groq LLM dynamically; otherwise applies
     context-aware heuristic patterns based on the language and stack trace.
     """
     logs_text = "\n".join(raw_logs[-20:]) if raw_logs else ""
@@ -123,11 +138,12 @@ Respond with valid JSON matching:
   "anti_pattern": "...",
   "anti_pattern_rationale": "..."
 }}
-Output raw JSON only. Do NOT include markdown code fences.
+Output raw JSON only. Ensure the output is valid JSON format.
 """
         try:
+            model_to_use = get_env_var("GROQ_MODEL", "qwen/qwen3.8-27b")
             response = groq_client.chat.completions.create(
-                model=GROQ_MODEL,
+                model=model_to_use,
                 messages=[{"role": "user", "content": prompt}],
                 response_format={"type": "json_object"}
             )
@@ -206,4 +222,3 @@ Output raw JSON only. Do NOT include markdown code fences.
     anti = "DO NOT restart the service container blindly without fixing the root cause."
     rationale = "Container restarts under identical load conditions replay the crash loop and degrade cluster availability."
     return patch, anti, rationale
-

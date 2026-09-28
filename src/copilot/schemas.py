@@ -8,14 +8,15 @@ class AlertTriggerPayload(BaseModel):
     raw_logs: List[str]
     title: Optional[str] = None
     description: Optional[str] = None
-    region: Optional[str] = "us-east-1a"
-    degraded_pods: Optional[str] = "4 / 12 pods"
-    error_spike: Optional[str] = "+840% p99"
-    detection_source: Optional[str] = "TEMPR v2"
+    region: Optional[str] = None
+    degraded_pods: Optional[str] = None
+    error_spike: Optional[str] = None
+    detection_source: Optional[str] = None
     blast_radius: Optional[List[str]] = None
     remediation_patch: Optional[str] = None
     anti_pattern: Optional[str] = None
     anti_pattern_rationale: Optional[str] = None
+    environment_metadata: Optional[Dict[str, Any]] = None
 
 class CommentPayload(BaseModel):
     author: str
@@ -36,10 +37,10 @@ class Ticket(BaseModel):
     raw_logs: List[str]
     title: Optional[str] = None
     description: Optional[str] = None
-    region: Optional[str] = "us-east-1a"
-    degraded_pods: Optional[str] = "4 / 12 pods"
-    error_spike: Optional[str] = "+840% p99"
-    detection_source: Optional[str] = "TEMPR v2"
+    region: Optional[str] = None
+    degraded_pods: Optional[str] = None
+    error_spike: Optional[str] = None
+    detection_source: Optional[str] = None
     blast_radius: List[str] = Field(default_factory=list)
     remediation_patch: Optional[str] = None
     anti_pattern: Optional[str] = None
@@ -50,3 +51,4 @@ class Ticket(BaseModel):
     is_recurring: bool = False
     reduction_stats: Optional[Dict[str, Any]] = None
     agent_trace: List[Dict[str, Any]] = Field(default_factory=list)
+    environment_metadata: Optional[Dict[str, Any]] = None

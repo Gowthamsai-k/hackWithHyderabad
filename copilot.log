@@ -1,0 +1,148 @@
+
+INFO:     Started server process [167807]
+INFO:     Waiting for application startup.
+/workspaces/hackWithHyderabad/src/copilot/hindsight_service.py:29: RuntimeWarning: coroutine 'Hindsight._acreate_bank' was never awaited
+  print(f"[*] Hindsight bank init notice (fallback enabled if offline): {e}")
+RuntimeWarning: Enable tracemalloc to get the object allocation traceback
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+[*] Hindsight bank init notice (fallback enabled if offline): This event loop is already running
+[*] Seeded 3 production incident tickets into environment.
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+[!] Hindsight live recall failed: (404)
+Reason: Not Found
+HTTP response headers: <CIMultiDictProxy('Date': 'Mon, 28 Sep 2026 13:26:01 GMT', 'Content-Type': 'application/json', 'Content-Length': '47', 'strict-transport-security': 'max-age=31536000; includeSubDomains', 'Via': '1.1 google', 'Alt-Svc': 'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000')>
+HTTP response body: {"detail":"Bank 'incident-ops-bank' not found"}
+
+[!] Groq patch generation failed (Error code: 404 - {'error': {'message': 'The model `qwen/qwen3-32b` does not exist or you do not have access to it.', 'type': 'invalid_request_error', 'code': 'model_not_found'}}). Using context-aware heuristic.
+INFO:     127.0.0.1:54864 - "POST /api/v1/alerts/trigger HTTP/1.1" 201 Created
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "POST /api/v1/tickets/INC-105/resolve HTTP/1.1" 200 OK
+[!] Groq synthesis failed (Error code: 404 - {'error': {'message': 'The model `qwen/qwen3-32b` does not exist or you do not have access to it.', 'type': 'invalid_request_error', 'code': 'model_not_found'}}). Falling back to heuristic extractor.
+[*] Generated post-mortem synthesis for INC-105 via fallback extractor.
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+[*] Successfully retained post-mortem for INC-105 in Hindsight bank: incident-ops-bank
+[*] Recorded post-mortem in knowledge store for ticket INC-105
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/tickets HTTP/1.1" 200 OK
+INFO:     202.65.158.178:0 - "GET /api/v1/realtime/status HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [167807]

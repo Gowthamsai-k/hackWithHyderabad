@@ -1,7 +1,10 @@
 import os
+import sys
+import platform
 from datetime import datetime, timezone
 from typing import Dict, List, Optional
 from contextlib import asynccontextmanager
+from dotenv import load_dotenv
 from fastapi import FastAPI, BackgroundTasks, HTTPException
 from fastapi.responses import PlainTextResponse, FileResponse
 from pydantic import BaseModel
@@ -11,12 +14,38 @@ from .hindsight_service import init_bank, recall_memory, get_all_memories, reset
 from .synthesizer import run_idle_post_mortem, synthesize_remediation_and_anti_pattern
 from .watcher import BackgroundLogWatcher
 
+load_dotenv()
+
+def get_env_var(key: str, default: str = "") -> str:
+    val = os.getenv(key, default)
+    if val:
+        val = val.strip().strip("'\"")
+    return val
+
+BANK_ID = get_env_var("BANK_ID", "incident-ops-bank")
+DEFAULT_REGION = get_env_var("DEFAULT_REGION", "us-east-1a")
+SEED_DEMO_TICKETS = get_env_var("SEED_DEMO_TICKETS", "false").lower() in ("true", "1", "yes")
+
+CHECKOUT_SERVICE_HOST = get_env_var("CHECKOUT_SERVICE_HOST", "127.0.0.1")
+CHECKOUT_SERVICE_PORT = get_env_var("CHECKOUT_SERVICE_PORT", "8050")
+CHECKOUT_BASE_URL = f"http://{CHECKOUT_SERVICE_HOST}:{CHECKOUT_SERVICE_PORT}"
+
 STATIC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "static"))
 log_watcher = BackgroundLogWatcher(buffer_size=100, debounce_window_sec=30.0)
 
+TICKETS: Dict[str, Ticket] = {}
+
+def get_system_runtime_info():
+    return {
+        "os": platform.system(),
+        "os_release": platform.release(),
+        "arch": platform.machine(),
+        "python_version": sys.version.split()[0],
+    }
+
 def seed_initial_tickets():
-    """Seeds realistic production incident tickets so the CRM has active incidents."""
-    if TICKETS:
+    """Optionally seeds initial production incident tickets if SEED_DEMO_TICKETS is set to true."""
+    if TICKETS or not SEED_DEMO_TICKETS:
         return
 
     now = datetime.now(timezone.utc)
@@ -28,7 +57,7 @@ def seed_initial_tickets():
         created_at=now,
         title="Redis Pool Starvation in checkout-service Pods",
         description="Connections exhausted during flash checkout load spike; transactions failing with timeout cascade to upstream payment router.",
-        region="us-east-1a",
+        region=DEFAULT_REGION,
         degraded_pods="4 / 12 pods",
         error_spike="+840% p99",
         detection_source="TEMPR v2",
@@ -53,7 +82,8 @@ def seed_initial_tickets():
         agent_trace=[
             {"phase": "FAST-PATH", "timestamp": now.isoformat(), "event": "Outage Signal Ingested", "detail": "TEMPR v2 alert stream debounced."},
             {"phase": "FAST-PATH", "timestamp": now.isoformat(), "event": "Living Memory Injected", "detail": "Recalled prior runbook & anti-pattern."}
-        ]
+        ],
+        environment_metadata=get_system_runtime_info()
     )
 
     t103 = Ticket(
@@ -64,7 +94,7 @@ def seed_initial_tickets():
         created_at=now,
         title="Upstream HTTP 504 Timeout Cascade",
         description="Payment router thread exhaustion propagating from database lock contention on checkout balances.",
-        region="us-east-1b",
+        region=DEFAULT_REGION,
         degraded_pods="6 / 18 pods",
         error_spike="+420% p99",
         detection_source="WATCHER v3",
@@ -81,7 +111,8 @@ def seed_initial_tickets():
         anti_pattern_rationale="Shortening client timeouts triggered retry cascades that doubled incoming request load on the database.",
         comments=[{"author": "DevOps", "text": "Circuit breaker tripped. Investigating balance DB latency.", "timestamp": now.isoformat()}],
         hindsight_runbook="Past fix on payment-gateway: Raised upstream timeout from 5000ms to 12000ms and adjusted circuit breaker thresholds.",
-        is_recurring=True
+        is_recurring=True,
+        environment_metadata=get_system_runtime_info()
     )
 
     t102 = Ticket(
@@ -92,7 +123,7 @@ def seed_initial_tickets():
         created_at=now,
         title="JWT Token Verification Latency Spike",
         description="Public key cache invalidation loop causing unthrottled JWKS endpoint requests.",
-        region="us-west-2a",
+        region=DEFAULT_REGION,
         degraded_pods="2 / 8 pods",
         error_spike="+180% p99",
         detection_source="HINDSIGHT",
@@ -108,7 +139,8 @@ def seed_initial_tickets():
         anti_pattern_rationale="Simultaneous cache flush causes stampedes against remote JWKS endpoints.",
         comments=[{"author": "SecOps", "text": "Patched JWKS cache TTL from 60s to 3600s. Cache hit ratio restored.", "timestamp": now.isoformat()}],
         hindsight_runbook="Verified Fix: Bumped JWKS_CACHE_TTL_SEC to 3600 to prevent cache stampedes.",
-        is_recurring=False
+        is_recurring=False,
+        environment_metadata=get_system_runtime_info()
     )
 
     TICKETS[t102.id] = t102
@@ -123,8 +155,6 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(title="Autonomous Incident Copilot", lifespan=lifespan)
-
-TICKETS: Dict[str, Ticket] = {}
 
 class LogIngestPayload(BaseModel):
     service: str = "checkout-service"
@@ -188,17 +218,18 @@ def trigger_alert(payload: AlertTriggerPayload):
         }
     ]
 
-    # Dynamic metadata extraction based on error type and service
-    title = payload.title or f"{payload.error_type} in {payload.service} Pods"
-    description = payload.description or f"Failure detected during load spike on {payload.service}; transactions encountering error cascade."
-    region = payload.region or "us-east-1a"
-    degraded_pods = payload.degraded_pods or "4 / 12 pods"
-    error_spike = payload.error_spike or "+840% p99"
-    detection_source = payload.detection_source or "TEMPR v2"
+    # Dynamic metadata extraction based on error type, service, and environment
+    title = payload.title or f"{payload.error_type} in {payload.service}"
+    description = payload.description or f"Failure detected during runtime on {payload.service}; transactions encountering error cascade."
+    region = payload.region or DEFAULT_REGION
+    degraded_pods = payload.degraded_pods or "Active instances impacted"
+    error_spike = payload.error_spike or "Elevated error rate"
+    detection_source = payload.detection_source or "COPILOT_WATCHER"
     blast_radius = payload.blast_radius or [f"{payload.service}:internal-worker", f"{payload.service}:egress"]
     remediation_patch = payload.remediation_patch
     anti_pattern = payload.anti_pattern
     anti_pattern_rationale = payload.anti_pattern_rationale
+    env_meta = payload.environment_metadata or get_system_runtime_info()
 
     if not remediation_patch or not anti_pattern:
         gen_patch, gen_anti, gen_rationale = synthesize_remediation_and_anti_pattern(
@@ -231,17 +262,19 @@ def trigger_alert(payload: AlertTriggerPayload):
         hindsight_runbook=recalled_runbook or "First occurrence: No prior runbook found in Hindsight.",
         is_recurring=is_recurring,
         reduction_stats=None,
-        agent_trace=agent_trace
+        agent_trace=agent_trace,
+        environment_metadata=env_meta
     )
     TICKETS[ticket_id] = ticket
 
+    port = get_env_var("PORT", "8000")
     return {
         "ticket_id": ticket.id,
         "service": ticket.service,
         "status": ticket.status,
         "is_recurring": is_recurring,
         "hindsight_injected_runbook": ticket.hindsight_runbook,
-        "ide_quick_load": f"curl -s http://localhost:8000/api/v1/tickets/{ticket.id}/context.md > .incident_context.md",
+        "ide_quick_load": f"curl -s http://localhost:{port}/api/v1/tickets/{ticket.id}/context.md > .incident_context.md",
         "agent_trace": ticket.agent_trace
     }
 
@@ -313,7 +346,16 @@ def _async_idle_worker(ticket_id: str, service: str, clean_logs: list, clean_cha
             "detail": f"Analyzing sanitized bundle to extract root causes, failed steps, and verified fixes."
         })
 
-    post_mortem = run_idle_post_mortem(ticket_id, service, clean_logs, clean_chat, closed_at)
+    extra_meta = TICKETS[ticket_id].environment_metadata if ticket_id in TICKETS else None
+    post_mortem = run_idle_post_mortem(
+        ticket_id, 
+        service, 
+        clean_logs, 
+        clean_chat, 
+        closed_at, 
+        bank_id=BANK_ID, 
+        extra_metadata=extra_meta
+    )
 
     if ticket_id in TICKETS:
         TICKETS[ticket_id].final_post_mortem = post_mortem
@@ -321,7 +363,7 @@ def _async_idle_worker(ticket_id: str, service: str, clean_logs: list, clean_cha
             "phase": "IDLE-PATH",
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "event": "Hindsight Memory Consolidated",
-            "detail": f"Permanently stored verified fix and anti-pattern warning into Hindsight bank: incident-ops-bank"
+            "detail": f"Permanently stored verified fix and anti-pattern warning into Hindsight bank: {BANK_ID}"
         })
 
 @app.post("/api/v1/tickets/{ticket_id}/resolve")
@@ -376,6 +418,11 @@ def get_incident_context_markdown(ticket_id: str):
     ticket = TICKETS[ticket_id]
     log_sample = "\n".join(ticket.raw_logs[:15])
 
+    env_block = ""
+    if ticket.environment_metadata:
+        env_lines = [f"- {k}: {v}" for k, v in ticket.environment_metadata.items()]
+        env_block = f"\n## 2. Environment & System Metadata\n" + "\n".join(env_lines) + "\n"
+
     return f"""# INCIDENT CONTEXT: {ticket.id} ({ticket.service})
 > Auto-generated by Incident Copilot at {ticket.created_at.isoformat()}Z.
 
@@ -383,16 +430,16 @@ def get_incident_context_markdown(ticket_id: str):
 - Service: {ticket.service}
 - Status: {ticket.status}
 - Severity: {ticket.severity}
-
-## 2. Telemetry & Log Snippet
+{env_block}
+## 3. Telemetry & Log Snippet
 ```text
 {log_sample}
 ```
 
-## 3. Institutional Runbook Memory (from Hindsight)
+## 4. Institutional Runbook Memory (from Hindsight)
 {ticket.hindsight_runbook}
 
-## 4. Remediation Invariant
+## 5. Remediation Invariant
 Any suggested fix must focus strictly on deployment or infrastructure configurations.
 Do not modify core application business logic.
 """
@@ -400,16 +447,16 @@ Do not modify core application business logic.
 @app.get("/api/v1/hindsight/memories")
 def get_hindsight_memories():
     return {
-        "bank_id": "incident-ops-bank",
+        "bank_id": BANK_ID,
         "memories": get_all_memories()
     }
 
 @app.get("/api/v1/realtime/status")
 def get_realtime_app_status():
-    """Polls real-time checkout-service metrics on port 8050."""
+    """Polls real-time checkout-service metrics."""
     import requests
     try:
-        res = requests.get("http://127.0.0.1:8050/metrics", timeout=1.0)
+        res = requests.get(f"{CHECKOUT_BASE_URL}/metrics", timeout=1.0)
         return {"online": True, "metrics": res.json()}
     except Exception:
         return {"online": False, "metrics": None}
@@ -442,9 +489,8 @@ def reset_demo():
     TICKETS.clear()
     reset_memory_bank()
     log_watcher.clear()
-    # Reset pool size back to 10
     try:
-        requests.post("http://127.0.0.1:8050/admin/scale-pool", params={"new_pool_size": 10}, timeout=1.0)
+        requests.post(f"{CHECKOUT_BASE_URL}/admin/scale-pool", params={"new_pool_size": 10}, timeout=1.0)
     except Exception:
         pass
     return {"status": "demo_environment_reset"}

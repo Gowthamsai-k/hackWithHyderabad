@@ -1,11 +1,27 @@
 import time
 import os
+import sys
+import platform
 import re
 import yaml
 import requests
 import threading
+from dotenv import load_dotenv
 
-COPILOT_TRIGGER_URL = os.getenv("COPILOT_TRIGGER_URL", "http://127.0.0.1:8000/api/v1/alerts/trigger")
+load_dotenv()
+
+def get_env_var(key: str, default: str = "") -> str:
+    val = os.getenv(key, default)
+    if val:
+        val = val.strip().strip("'\"")
+    return val
+
+COPILOT_PORT = get_env_var("PORT", "8000")
+COPILOT_HOST = get_env_var("HOST", "127.0.0.1")
+if COPILOT_HOST == "0.0.0.0":
+    COPILOT_HOST = "127.0.0.1"
+
+COPILOT_TRIGGER_URL = get_env_var("COPILOT_TRIGGER_URL", f"http://{COPILOT_HOST}:{COPILOT_PORT}/api/v1/alerts/trigger")
 CONFIG_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "config", "projects.yaml"))
 
 DEFAULT_ERROR_PATTERNS = [
@@ -17,6 +33,17 @@ DEFAULT_ERROR_PATTERNS = [
 _ACTIVE_WATCHER_THREADS = {}
 _ACTIVE_WATCHER_STOP_FLAGS = {}
 _LOCK = threading.Lock()
+
+def get_runtime_metadata(project: dict) -> dict:
+    """Extracts dynamic runtime and dependency versions."""
+    meta = {
+        "os": platform.system(),
+        "os_release": platform.release(),
+        "arch": platform.machine(),
+        "python_version": sys.version.split()[0],
+        "project_runtime": project.get("runtime", "unknown")
+    }
+    return meta
 
 def extract_exception_name(line: str) -> str:
     matches = re.findall(r"([a-zA-Z0-9_\.]*(?:Exception|Error|Fatal|Panic))(?::|\s|$)", line)
@@ -100,6 +127,7 @@ def tail_project_log(project: dict, stop_flag: threading.Event):
                     
                     try:
                         error_type = extract_exception_name(cleaned)
+                        runtime_meta = get_runtime_metadata(project)
                         payload = {
                             "service": service,
                             "error_type": error_type,
@@ -108,7 +136,8 @@ def tail_project_log(project: dict, stop_flag: threading.Event):
                             "description": project.get("default_description") or f"Unhandled failure detected in project '{project['id']}'.",
                             "remediation_patch": project.get("remediation_patch"),
                             "anti_pattern": project.get("anti_pattern"),
-                            "anti_pattern_rationale": project.get("anti_pattern_rationale")
+                            "anti_pattern_rationale": project.get("anti_pattern_rationale"),
+                            "environment_metadata": runtime_meta
                         }
                         res = requests.post(COPILOT_TRIGGER_URL, json=payload, timeout=5.0)
                         if res.status_code == 201:

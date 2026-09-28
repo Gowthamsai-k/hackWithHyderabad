@@ -608,7 +608,7 @@
 
         document.getElementById('context-modal-title').textContent = `${activeModalTicket.id} (${activeModalTicket.service})`;
         document.getElementById('context-raw-view').textContent = currentRawContextMarkdown;
-        document.getElementById('context-curl-hint').textContent = `curl -s http://localhost:8000/api/v1/tickets/${activeModalTicket.id}/context.md | claude`;
+        document.getElementById('context-curl-hint').textContent = `curl -s ${window.location.origin}/api/v1/tickets/${activeModalTicket.id}/context.md | claude`;
 
         // Parse markdown with marked.js
         const renderedContainer = document.getElementById('context-rendered-view');
@@ -657,7 +657,7 @@
 
     function copyContextCurlCommand() {
       if (!activeModalTicket) return;
-      const cmd = `curl -s http://localhost:8000/api/v1/tickets/${activeModalTicket.id}/context.md | claude`;
+      const cmd = `curl -s ${window.location.origin}/api/v1/tickets/${activeModalTicket.id}/context.md | claude`;
       navigator.clipboard.writeText(cmd);
       alert(`Copied agentic terminal command:\n${cmd}`);
     }

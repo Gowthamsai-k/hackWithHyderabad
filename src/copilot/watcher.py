@@ -1,20 +1,36 @@
 import re
+import os
 import time
 import hashlib
 from collections import deque
-from typing import Optional, List, Dict, Callable
+from typing import Optional, List, Dict
+from dotenv import load_dotenv
 
-CRASH_REGEX = re.compile(
-    r"(ERROR|FATAL|CRITICAL|Exception|ConnectionPool timeout|ConnectionTimeout|OOMKilled|504 Gateway Timeout|IndexOutOfBoundsException|ArrayIndexOutOfBoundsException|NullPointerException)",
-    re.IGNORECASE
+load_dotenv()
+
+def get_env_var(key: str, default: str = "") -> str:
+    val = os.getenv(key, default)
+    if val:
+        val = val.strip().strip("'\"")
+    return val
+
+DEFAULT_REGEX_STR = (
+    r"(ERROR|FATAL|CRITICAL|Exception|ConnectionPool timeout|ConnectionTimeout|"
+    r"OOMKilled|504 Gateway Timeout|IndexOutOfBoundsException|ArrayIndexOutOfBoundsException|"
+    r"NullPointerException|Panic|Traceback)"
 )
+CUSTOM_REGEX = get_env_var("CRASH_REGEX_PATTERN", DEFAULT_REGEX_STR)
+CRASH_REGEX = re.compile(CUSTOM_REGEX, re.IGNORECASE)
+
+BUFFER_SIZE = int(get_env_var("LOG_BUFFER_SIZE", "100"))
+DEBOUNCE_WINDOW_SEC = float(get_env_var("DEBOUNCE_WINDOW_SEC", "30.0"))
 
 class BackgroundLogWatcher:
     """
     Passive In-Memory Ring Buffer Listener with regex crash detection
     and fingerprint debouncing.
     """
-    def __init__(self, buffer_size: int = 100, debounce_window_sec: float = 30.0):
+    def __init__(self, buffer_size: int = BUFFER_SIZE, debounce_window_sec: float = DEBOUNCE_WINDOW_SEC):
         self.ring_buffer: deque = deque(maxlen=buffer_size)
         self.debounce_window_sec = debounce_window_sec
         self.recent_fingerprints: Dict[str, float] = {}

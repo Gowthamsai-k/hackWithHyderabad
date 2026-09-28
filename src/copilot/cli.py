@@ -3,8 +3,22 @@ import sys
 import os
 import subprocess
 import requests
+from dotenv import load_dotenv
 
-COPILOT_URL = os.getenv("COPILOT_URL", "http://127.0.0.1:8000")
+load_dotenv()
+
+def get_env_var(key: str, default: str = "") -> str:
+    val = os.getenv(key, default)
+    if val:
+        val = val.strip().strip("'\"")
+    return val
+
+COPILOT_PORT = get_env_var("PORT", "8000")
+COPILOT_HOST = get_env_var("HOST", "127.0.0.1")
+if COPILOT_HOST == "0.0.0.0":
+    COPILOT_HOST = "127.0.0.1"
+
+COPILOT_URL = get_env_var("COPILOT_URL", f"http://{COPILOT_HOST}:{COPILOT_PORT}")
 
 def run_project(cmd_args: list):
     """
