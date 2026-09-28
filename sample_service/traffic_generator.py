@@ -1,10 +1,24 @@
 import time
+import os
 import requests
 import concurrent.futures
+from dotenv import load_dotenv
 
-CHECKOUT_URL = "http://127.0.0.1:8050/checkout"
-ADMIN_SCALE_URL = "http://127.0.0.1:8050/admin/scale-pool"
-ADMIN_RESTART_URL = "http://127.0.0.1:8050/admin/restart"
+load_dotenv()
+
+def get_env_var(key: str, default: str = "") -> str:
+    val = os.getenv(key, default)
+    if val:
+        val = val.strip().strip("'\"")
+    return val
+
+HOST = get_env_var("CHECKOUT_SERVICE_HOST", "127.0.0.1")
+PORT = get_env_var("CHECKOUT_SERVICE_PORT", "8050")
+BASE_URL = f"http://{HOST}:{PORT}"
+
+CHECKOUT_URL = f"{BASE_URL}/checkout"
+ADMIN_SCALE_URL = f"{BASE_URL}/admin/scale-pool"
+ADMIN_RESTART_URL = f"{BASE_URL}/admin/restart"
 
 def send_single_checkout(user_id: int):
     try:

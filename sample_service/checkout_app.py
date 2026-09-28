@@ -4,15 +4,26 @@ import threading
 from datetime import datetime, timezone
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+from dotenv import load_dotenv
+
+load_dotenv()
+
+def get_env_var(key: str, default: str = "") -> str:
+    val = os.getenv(key, default)
+    if val:
+        val = val.strip().strip("'\"")
+    return val
+
+SERVICE_NAME = get_env_var("CHECKOUT_SERVICE_NAME", "checkout-service")
+DEFAULT_MAX_CONNECTIONS = int(get_env_var("CHECKOUT_MAX_CONNECTIONS", "10"))
+LOG_FILE_PATH = get_env_var("CHECKOUT_LOG_FILE", os.path.join(os.path.dirname(__file__), "checkout.log"))
 
 app = FastAPI(title="Production Checkout Service")
 
-LOG_FILE = os.path.join(os.path.dirname(__file__), "checkout.log")
-
 CONFIG = {
-    "max_connections": 10,
+    "max_connections": DEFAULT_MAX_CONNECTIONS,
     "active_connections": 0,
-    "service_name": "checkout-service",
+    "service_name": SERVICE_NAME,
     "status": "healthy"
 }
 lock = threading.Lock()
@@ -21,7 +32,7 @@ def write_log(level: str, message: str):
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
     entry = f"{timestamp} {level} {message}\n"
     print(entry, end="")
-    with open(LOG_FILE, "a", encoding="utf-8") as f:
+    with open(LOG_FILE_PATH, "a", encoding="utf-8") as f:
         f.write(entry)
 
 class CheckoutRequest(BaseModel):
@@ -31,9 +42,9 @@ class CheckoutRequest(BaseModel):
 @app.on_event("startup")
 def on_start():
     # Clear old log file
-    with open(LOG_FILE, "w", encoding="utf-8") as f:
-        f.write(f"{datetime.now(timezone.utc).isoformat()} INFO checkout-service initialized on port 8050 (max_connections={CONFIG['max_connections']})\n")
-    write_log("INFO", "Kubernetes pod checkout-service-7f8d9b-c4x9k ready for ingress")
+    with open(LOG_FILE_PATH, "w", encoding="utf-8") as f:
+        f.write(f"{datetime.now(timezone.utc).isoformat()} INFO {CONFIG['service_name']} initialized (max_connections={CONFIG['max_connections']})\n")
+    write_log("INFO", f"Kubernetes pod {CONFIG['service_name']}-ready for ingress")
 
 @app.get("/healthz")
 def health_check():
@@ -82,7 +93,7 @@ def scale_connection_pool(new_pool_size: int = 50):
 @app.post("/admin/restart")
 def simulate_rolling_restart():
     """Simulates an on-call engineer restarting pods without changing pool limits."""
-    write_log("WARN", "Rolling restart initiated on checkout-service pod replicas...")
+    write_log("WARN", f"Rolling restart initiated on {CONFIG['service_name']} pod replicas...")
     time.sleep(0.5)
     write_log("INFO", f"Pods restarted. Active pool limit remains constrained at {CONFIG['max_connections']}.")
     return {"status": "restarted", "max_connections": CONFIG["max_connections"]}

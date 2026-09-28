@@ -1,9 +1,43 @@
 import time
 import os
 import requests
+from dotenv import load_dotenv
+from presidio_analyzer import AnalyzerEngine
+from presidio_anonymizer import AnonymizerEngine
 
-COPILOT_INGEST_URL = os.getenv("COPILOT_INGEST_URL", "http://127.0.0.1:8000/api/v1/logs/ingest")
-LOG_FILE = os.path.join(os.path.dirname(__file__), "checkout.log")
+load_dotenv()
+
+def get_env_var(key: str, default: str = "") -> str:
+    val = os.getenv(key, default)
+    if val:
+        val = val.strip().strip("'\"")
+    return val
+
+COPILOT_PORT = get_env_var("PORT", "8000")
+COPILOT_HOST = get_env_var("HOST", "127.0.0.1")
+if COPILOT_HOST == "0.0.0.0":
+    COPILOT_HOST = "127.0.0.1"
+
+COPILOT_INGEST_URL = get_env_var("COPILOT_INGEST_URL", f"http://{COPILOT_HOST}:{COPILOT_PORT}/api/v1/logs/ingest")
+LOG_FILE = get_env_var("CHECKOUT_LOG_FILE", os.path.join(os.path.dirname(__file__), "checkout.log"))
+SERVICE_NAME = get_env_var("CHECKOUT_SERVICE_NAME", "checkout-service")
+
+# Initialize Presidio engines once
+analyzer = AnalyzerEngine()
+anonymizer = AnonymizerEngine()
+
+def sanitize_log_line(log_text: str) -> str:
+    """Uses Microsoft Presidio to detect and redact sensitive PII (Emails, Names, Phone numbers, Credit Cards, SSNs, IPs)."""
+    results = analyzer.analyze(
+        text=log_text,
+        entities=["EMAIL_ADDRESS", "PERSON", "PHONE_NUMBER", "CREDIT_CARD", "IP_ADDRESS", "US_SSN"],
+        language="en"
+    )
+    anonymized_result = anonymizer.anonymize(
+        text=log_text,
+        analyzer_results=results
+    )
+    return anonymized_result.text
 
 def tail_logs():
     print(f"[*] Starting Log Tailer Agent watching {LOG_FILE} -> {COPILOT_INGEST_URL}")
@@ -27,10 +61,13 @@ def tail_logs():
             if not cleaned_line:
                 continue
 
+            # Redact sensitive data using Microsoft Presidio before sending to LLM/Copilot
+            sanitized_line = sanitize_log_line(cleaned_line)
+
             try:
                 res = requests.post(
                     COPILOT_INGEST_URL,
-                    json={"service": "checkout-service", "log_line": cleaned_line},
+                    json={"service": SERVICE_NAME, "log_line": sanitized_line},
                     timeout=2.0
                 )
                 if res.status_code == 200:
