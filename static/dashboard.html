@@ -339,6 +339,11 @@
         </div>
 
         <div class="flex items-center gap-2">
+          <!-- Back button to return to ticket without overlap -->
+          <button onclick="closeContextModal()" class="text-xs bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1 rounded-md font-medium shadow-2xs transition flex items-center gap-1.5 cursor-pointer mr-1">
+            <i class="fa-solid fa-arrow-left text-[10px] text-slate-400"></i> Back to Incident
+          </button>
+
           <!-- View Toggle -->
           <div class="flex bg-slate-200/80 p-0.5 rounded-lg text-xs font-medium">
             <button id="btn-view-rendered" onclick="switchContextTab('rendered')" class="px-2.5 py-1 rounded-md bg-white text-slate-800 shadow-xs text-xs font-semibold cursor-pointer">
@@ -349,7 +354,7 @@
             </button>
           </div>
 
-          <button onclick="closeContextModal()" class="text-slate-400 hover:text-slate-600 w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-200/50 transition cursor-pointer ml-1">
+          <button onclick="closeContextModal()" class="text-slate-400 hover:text-slate-600 w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-200/50 transition cursor-pointer ml-1" title="Close">
             <i class="fa-solid fa-xmark text-sm"></i>
           </button>
         </div>
@@ -614,6 +619,9 @@
         }
 
         switchContextTab('rendered');
+
+        // HIDE incident modal to prevent overlapping!
+        document.getElementById('incident-modal').classList.add('hidden');
         document.getElementById('context-modal').classList.remove('hidden');
       } catch (err) {
         alert("Failed to load context.md: " + err);
@@ -622,6 +630,10 @@
 
     function closeContextModal() {
       document.getElementById('context-modal').classList.add('hidden');
+      // Smoothly restore incident ticket modal
+      if (activeModalTicket) {
+        document.getElementById('incident-modal').classList.remove('hidden');
+      }
     }
 
     function switchContextTab(tab) {
